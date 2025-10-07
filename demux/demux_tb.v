@@ -1,8 +1,8 @@
 module demux_tb;
     localparam NUM_OUTPUTS = 5;
 
-    reg [$clog2(NUM_OUTPUTS) -1 : 0] select;
-    wire [NUM_OUTPUTS - 1 : 0] output_data;
+    logic [$clog2(NUM_OUTPUTS) -1 : 0] select;
+    logic [NUM_OUTPUTS - 1 : 0] output_data;
 
     demux #(
         .NUM_OUTPUTS(NUM_OUTPUTS)
