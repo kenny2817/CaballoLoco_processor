@@ -1,10 +1,13 @@
-all: mux demux
+VFLAGS = -g2012
+TARGETS = m d
 
-mux: mux/mux.v mux/mux_tb.v
-	iverilog -g2012 -o m mux/mux.v mux/mux_tb.v
+all: $(TARGETS)
 
-demux: demux/demux.v demux/demux_tb.v
-	iverilog -g2012 -o d demux/demux.v demux/demux_tb.v
+m: mux/mux.v mux/mux_tb.v
+	iverilog $(VFLAGS) -o $@ $^ 
+
+d: demux/demux.v demux/demux_tb.v
+	iverilog $(VFLAGS) -o $@ $^
 
 clean:
 	rm m d
