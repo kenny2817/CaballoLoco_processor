@@ -1,5 +1,5 @@
 VFLAGS = -g2012
-TARGETS = m d r
+TARGETS = m d c r
 
 all: $(TARGETS)
 
@@ -12,5 +12,8 @@ d: demux/demux.v demux/demux_tb.v
 r: register/register.v register/register_tb.v
 	iverilog $(VFLAGS) -o $@ $^
 
+c: cmp/cmp.v cmp/cmp_tb.v
+	iverilog $(VFLAGS) -o $@ $^
+
 clean:
-	rm m d
+	rm m d c

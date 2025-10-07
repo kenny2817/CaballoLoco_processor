@@ -1,6 +1,6 @@
 module mux_tb;
     // Parameters
-    localparam NUM_INPUTS = 4;
+    localparam NUM_INPUTS = 6;
     localparam DATA_WIDTH = 8;
 
     // Signals
@@ -18,7 +18,7 @@ module mux_tb;
     );
 
     initial begin
-        data_bus = {8'hAA, 8'hBB, 8'hCC, 8'hDD};
+        data_bus = {8'hAA, 8'hBB, 8'hCC, 8'hDD, 8'hEE, 8'hFF};
         select = 0; #10;
         $display("Select=%0d -> Output=%h", select, output_data);
 
@@ -28,7 +28,7 @@ module mux_tb;
         select = 2; #10;
         $display("Select=%0d -> Output=%h", select, output_data);
 
-        select = 3; #10;
+        select = 7; #10;
         $display("Select=%0d -> Output=%h", select, output_data);
 
         $finish;
