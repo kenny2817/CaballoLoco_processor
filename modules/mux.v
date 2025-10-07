@@ -12,6 +12,6 @@ always_comb begin
     if (i_select < NUM_INPUTS)
         o_output = i_data_bus[i_select * DATA_WIDTH +: DATA_WIDTH];
     else
-        o_output = 'X; 
+        o_output = 'x; 
 end
 endmodule

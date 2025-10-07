@@ -1,10 +1,12 @@
+import cmp_pkg::*;
+
 module cmp_tb;
     
     localparam DATA_WIDTH = 8;
 
     logic [DATA_WIDTH - 1 : 0] elemA;
     logic [DATA_WIDTH - 1 : 0] elemB;
-    logic [1 : 0] op;
+    cmp_op_e op;
     logic out;
 
     cmp #(
@@ -19,20 +21,20 @@ module cmp_tb;
     initial begin
         elemA = 8'h05;
         elemB = 8'h05;
-        op = 2'b00; #10;
+        op = NOP; #10;
         $display("A=%h, B=%h, Op=%b, Output=%b",elemA, elemB, op, out);
-        op = 2'b01; #10;
+        op = BEQ; #10;
         $display("A=%h, B=%h, Op=%b, Output=%b",elemA, elemB, op, out);
-        op = 2'b10; #10;
+        op = BLT; #10;
         $display("A=%h, B=%h, Op=%b, Output=%b",elemA, elemB, op, out);
-        op = 2'b11; #10;
+        op = BLE; #10;
         $display("A=%h, B=%h, Op=%b, Output=%b",elemA, elemB, op, out);
         elemB = 8'h07;
-        op = 2'b01; #10;
+        op = BEQ; #10;
         $display("A=%h, B=%h, Op=%b, Output=%b",elemA, elemB, op, out);
-        op = 2'b10; #10;
+        op = BLT; #10;
         $display("A=%h, B=%h, Op=%b, Output=%b",elemA, elemB, op, out);
-        op = 2'b11; #10;
+        op = BLE; #10;
         $display("A=%h, B=%h, Op=%b, Output=%b",elemA, elemB, op, out);
         $finish;
     end

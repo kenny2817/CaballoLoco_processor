@@ -7,6 +7,7 @@ The fastest processor whenever Will Smith is in the backstage.
 ### BASIC MODULES
 
 - [] aritmetic unit - alu
+- [] program counter incrementer - pci
 - [x] demultiplexer - demux
 - [x] multiplexer - mux
 - [x] register - reg

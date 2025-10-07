@@ -4,12 +4,13 @@ module demux #(
 )
 (
     input wire [SELECT_BITS - 1 : 0] i_select,
+    input wire i_enable,
     output reg [NUM_OUTPUTS - 1 : 0] o_output
 );
     always_comb begin
         o_output = '0;
 
-        if (i_select < NUM_OUTPUTS) begin
+        if (i_enable && i_select < NUM_OUTPUTS) begin
             o_output[i_select] = '1;
         end
     end

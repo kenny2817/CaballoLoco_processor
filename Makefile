@@ -1,21 +1,26 @@
 VFLAGS = -g2012
 MODULES_DIR = modules
-TARGETS = mux demux cmp register
+TB_DIR = tb
+PKG_DIR = pkgs
+TARGETS = mux demux cmp register alu
 
 .PHONY: all $(TARGETS) clean
 
 all: $(TARGETS)
 
-mux: $(MODULES_DIR)/mux/mux.v $(MODULES_DIR)/mux/mux_tb.v
+mux: $(MODULES_DIR)/mux.v $(TB_DIR)/mux_tb.v
 	iverilog $(VFLAGS) -o $@ $^
 
-demux: $(MODULES_DIR)/demux/demux.v $(MODULES_DIR)/demux/demux_tb.v
+demux: $(MODULES_DIR)/demux.v $(TB_DIR)/demux_tb.v
 	iverilog $(VFLAGS) -o $@ $^
 
-cmp: $(MODULES_DIR)/cmp/cmp.v $(MODULES_DIR)/cmp/cmp_tb.v
+register: $(MODULES_DIR)/register.v $(TB_DIR)/register_tb.v
 	iverilog $(VFLAGS) -o $@ $^
 
-register: $(MODULES_DIR)/register/register.v $(MODULES_DIR)/register/register_tb.v
+cmp: $(PKG_DIR)/cmp_pkg.sv $(MODULES_DIR)/cmp.sv $(TB_DIR)/cmp_tb.sv
+	iverilog $(VFLAGS) -o $@ $^
+
+alu: $(PKG_DIR)/alu_pkg.sv $(MODULES_DIR)/alu.sv $(TB_DIR)/alu_tb.sv
 	iverilog $(VFLAGS) -o $@ $^
 
 clean:
