@@ -1,19 +1,22 @@
 VFLAGS = -g2012
-TARGETS = m d c r
+MODULES_DIR = modules
+TARGETS = mux demux cmp register
+
+.PHONY: all $(TARGETS) clean
 
 all: $(TARGETS)
 
-m: mux/mux.v mux/mux_tb.v
-	iverilog $(VFLAGS) -o $@ $^ 
-
-d: demux/demux.v demux/demux_tb.v
+mux: $(MODULES_DIR)/mux/mux.v $(MODULES_DIR)/mux/mux_tb.v
 	iverilog $(VFLAGS) -o $@ $^
 
-r: register/register.v register/register_tb.v
+demux: $(MODULES_DIR)/demux/demux.v $(MODULES_DIR)/demux/demux_tb.v
 	iverilog $(VFLAGS) -o $@ $^
 
-c: cmp/cmp.v cmp/cmp_tb.v
+cmp: $(MODULES_DIR)/cmp/cmp.v $(MODULES_DIR)/cmp/cmp_tb.v
+	iverilog $(VFLAGS) -o $@ $^
+
+register: $(MODULES_DIR)/register/register.v $(MODULES_DIR)/register/register_tb.v
 	iverilog $(VFLAGS) -o $@ $^
 
 clean:
-	rm m d c
+	rm -f $(TARGETS)
