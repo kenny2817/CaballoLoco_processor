@@ -10,7 +10,7 @@ module demux #(
         o_output = '0;
 
         if (i_select < NUM_OUTPUTS) begin
-            o_output[i_select] = 1;
+            o_output[i_select] = '1;
         end
     end
 endmodule
