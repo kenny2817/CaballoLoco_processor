@@ -6,7 +6,7 @@ The fastest processor whenever Will Smith is in the backstage.
 
 ### BASIC MODULES
 
-- [ ] aritmetic unit - alu
+- [x] aritmetic unit - alu
 - [ ] program counter incrementer - pci
 - [x] demultiplexer - demux
 - [x] multiplexer - mux
@@ -25,10 +25,10 @@ Everything not strictly necessary.
 
 Some possibilities that came to my mind, we should sort and implement at least 5/10 of these I guess.
 
-- [ ] addition - add
-- [ ] subtraction - sub
-- [ ] or
-- [ ] and
+- [x] addition - add
+- [x] subtraction - sub
+- [x] or
+- [x] and
 - [ ] xor
 - [ ] load word - lw
 - [ ] store word - sw

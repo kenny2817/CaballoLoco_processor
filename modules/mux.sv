@@ -6,7 +6,7 @@ module mux #(
 (
     input wire [NUM_INPUTS * DATA_WIDTH - 1 : 0] i_data_bus, 
     input wire [SELECT_BITS - 1 : 0] i_select,
-    output reg [DATA_WIDTH - 1 : 0] o_output
+    output wire [DATA_WIDTH - 1 : 0] o_output
 );
 always_comb begin
     if (i_select < NUM_INPUTS)
