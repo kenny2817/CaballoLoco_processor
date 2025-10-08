@@ -6,8 +6,8 @@ The fastest processor whenever Will Smith is in the backstage.
 
 ### BASIC MODULES
 
-- [] aritmetic unit - alu
-- [] program counter incrementer - pci
+- [ ] aritmetic unit - alu
+- [ ] program counter incrementer - pci
 - [x] demultiplexer - demux
 - [x] multiplexer - mux
 - [x] register - reg
@@ -17,24 +17,24 @@ The fastest processor whenever Will Smith is in the backstage.
 Everything not strictly necessary.
 
 - [x] comparator - cmp
-- [] opcode decoder -
-- [] exeption handler -
-- [] main logic - cbl (CaBalloLoco)
+- [ ] opcode decoder -
+- [ ] exeption handler -
+- [ ] main logic - cbl (CaBalloLoco)
 
 ### OPCODES
 
 Some possibilities that came to my mind, we should sort and implement at least 5/10 of these I guess.
 
-- [] addition - add
-- [] subtraction - sub
-- [] or
-- [] and
-- [] xor
-- [] load word - lw
-- [] store word - sw
-- [] branch equal - beq
-- [] branch less - blt
-- [] branch less or equal - ble
-- [] jump
-- [] shift left - shl
-- [] shift right - shr
+- [ ] addition - add
+- [ ] subtraction - sub
+- [ ] or
+- [ ] and
+- [ ] xor
+- [ ] load word - lw
+- [ ] store word - sw
+- [ ] branch equal - beq
+- [ ] branch less - blt
+- [ ] branch less or equal - ble
+- [ ] jump
+- [ ] shift left - shl
+- [ ] shift right - shr
