@@ -1,7 +1,7 @@
 import alu_pkg::*;
 
 module alu #(
-    parameter DATA_WIDTH
+    parameter logic DATA_WIDTH
 )
 (
     input wire [DATA_WIDTH - 1 : 0] i_elemA,
@@ -19,3 +19,4 @@ always_comb begin
     endcase
 end
 endmodule
+
