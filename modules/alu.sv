@@ -11,10 +11,13 @@ module alu #(
 );
 always_comb begin
     case (i_op)
-        ADD_OP: o_output = (i_elemA + i_elemB);
-        SUB_OP: o_output = (i_elemA - i_elemB);
-        AND_OP: o_output = (i_elemA & i_elemB);
-        OR_OP: o_output = (i_elemA | i_elemB);
+        ADD: o_output = (i_elemA + i_elemB);
+        SUB: o_output = (i_elemA - i_elemB);
+        AND: o_output = (i_elemA & i_elemB);
+        OR: o_output = (i_elemA | i_elemB);
+        XOR: o_output = (i_elemA ^ i_elemB);
+        MUL: o_output = (i_elemA * i_elemB);
+        DIV: o_output = (i_elemA / i_elemB);
         default: o_output = 'x;
     endcase
 end

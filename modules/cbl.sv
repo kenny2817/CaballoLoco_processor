@@ -208,10 +208,11 @@ module cbl #(
         .o_output(mem_1)
     );
 
+// REG DATA
     mux #(
         .NUM_INPUTS(2),
         .DATA_WIDTH(REG_WIDTH)
-    ) MUX_REG_B_1 (
+    ) MUX_REG_DATA (
         .i_data_bus({alu_1, mem_1}),
         .i_select(),
         .o_output(reg_data_0)
@@ -220,7 +221,7 @@ module cbl #(
     register #(
         .DATA_WIDTH(REG_WIDTH),
         .NUM_REG(1)
-    ) RES_ALU (
+    ) REG_DATA (
         .clk(clk),
         .i_write_enable(UP),
         .i_write_data(reg_data_0),

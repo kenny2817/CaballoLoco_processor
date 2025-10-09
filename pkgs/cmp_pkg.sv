@@ -7,6 +7,7 @@ package cmp_pkg;
         BEQ,
         BLT,
         BLE
+        // DONT_CARE = {CMP_OP_WIDTH{1'bx}} // if there are more options
     } cmp_op_e;
     
 endpackage

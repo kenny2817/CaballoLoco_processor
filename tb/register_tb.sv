@@ -1,6 +1,6 @@
 `timescale 1ns/100ps
 
-module tb_register;
+module register_tb;
 
     localparam DATA_WIDTH = 8;
     localparam NUM_REG = 6;
@@ -37,7 +37,7 @@ module tb_register;
     end
 
     initial begin
-        $monitor("t=%0t | rst=%b | en=%b | in=%h | out=%h", $time, rst, write_enable, write_data, read_data);
+        $monitor("t=%0t | en=%b | in=%h | out=%h", $time, write_enable, write_data, read_data);
     end
 
 endmodule

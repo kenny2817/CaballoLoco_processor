@@ -29,6 +29,9 @@ alu: $(PKG_DIR)/alu_pkg.sv $(MODULES_DIR)/alu.sv $(TB_DIR)/alu_tb.sv
 pci: $(MODULES_DIR)/pci.sv $(TB_DIR)/pci_tb.sv
 	iverilog $(VFLAGS) -o $@ $^
 
+opd_32: $(PKG_DIR)/alu_pkg.sv $(PKG_DIR)/cmp_pkg.sv $(PKG_DIR)/opcodes_pkg.sv  $(MODULES_DIR)/opd_32.sv $(TB_DIR)/opd_32_tb.sv
+	iverilog $(VFLAGS) -o $@ $^
+
 clean:
 	rm -f $(TARGETS)
 
