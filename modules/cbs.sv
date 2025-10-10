@@ -108,7 +108,7 @@ module cbs #(
         .NUM_INPUTS(2),
         .DATA_WIDTH(REG_WIDTH)
     ) MUX_REG_A_1 (
-        .i_data_bus({reg_a, {(REG_WIDTH - INSTR_SELECT){1'b0}}, pc}),
+        .i_data_bus({{(REG_WIDTH - INSTR_SELECT){1'b0}}, pc, reg_a}),
         .i_select(is_cmp),
         .o_output(a)
     );
@@ -127,7 +127,7 @@ module cbs #(
         .NUM_INPUTS(2),
         .DATA_WIDTH(REG_WIDTH)
     ) MUX_REG_B_1 (
-        .i_data_bus({reg_b, offset}),
+        .i_data_bus({offset, reg_b}),
         .i_select(is_store || is_load || is_cmp),
         .o_output(b)
     );
@@ -157,7 +157,7 @@ module cbs #(
         .NUM_INPUTS(2),
         .DATA_WIDTH(REG_WIDTH)
     ) MUX_ALU_MEM (
-        .i_data_bus({alu_data, mem_data}),
+        .i_data_bus({mem_data, alu_data}),
         .i_select(is_load),
         .o_output(new_reg)
     );

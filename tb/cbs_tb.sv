@@ -7,7 +7,7 @@ module cbs_tb;
 
     localparam NUM_REG = 5;
     localparam REG_WIDTH = 32;
-    localparam NUM_INSTR = 5;
+    localparam NUM_INSTR = 10;
     localparam NUM_MEM = 5;
     localparam REG_SELECT = $clog2(NUM_REG);
     localparam MEM_SELECT = $clog2(NUM_MEM);
@@ -62,20 +62,23 @@ module cbs_tb;
     always #10 display = ~display;
 
     initial begin
-        // instructions = '0;
-        instructions[NUM_INSTR*REG_WIDTH -1 - REG_WIDTH -: REG_WIDTH] = {LW_OP, 3'd0, 3'd0, 3'd0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        // instructions[NUM_INSTR * REG_WIDTH -1 -: REG_WIDTH] = {4'd3, 5'd0, 5'd0, 5'd0, {(REG_WIDTH - OPCODES_WIDTH - REG_SELECT * 3){1'b0}}};
+        $monitoroff;
+        instructions[0 * REG_WIDTH +: REG_WIDTH] = {LW_OP, 3'd0, 3'd0, 3'd0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        instructions[1 * REG_WIDTH +: REG_WIDTH] = {LW_OP, 3'd0, 3'd0, 3'd1, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        instructions[2 * REG_WIDTH +: REG_WIDTH] = {ADD_OP, 3'd1, 3'd0, 3'd2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        instructions[3 * REG_WIDTH +: REG_WIDTH] = {SW_OP, 3'd2, 3'd2, 3'd0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         rst = 1;
         fake_select = 0; fake_word = 1;
         #10;
         fake_select = 1; fake_word = 2;
         #10;
         rst = 0;
-        #71;
+        $monitoron;
+        #100;
         $finish;
     end
 
-initial $monitor("t=%3t | pc= %2d | ist=%b | a=%b | b=%b | alu=%b | reg=%b | mem %b", 
-                $time, dut.pc,dut.instruction, dut.a, dut.b, dut.alu_data, dut.regs, mem);
+initial $monitor("t=%3t | pc= %2d | ist=%b | rega=%b a=%b | regb=%b b=%b | alu=%b | reg=%b | mem %b", 
+                $time, dut.pc,dut.instruction, dut.reg_a, dut.a, dut.reg_b, dut.b, dut.alu_data, dut.regs, mem);
 
 endmodule
