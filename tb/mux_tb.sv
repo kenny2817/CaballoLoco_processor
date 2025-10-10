@@ -2,8 +2,8 @@ module mux_tb;
     localparam NUM_INPUTS = 6;
     localparam DATA_WIDTH = 8;
 
-    logic  [NUM_INPUTS * DATA_WIDTH - 1 : 0] data_bus;
-    logic  [$clog2(NUM_INPUTS) - 1 : 0] select;
+    logic [NUM_INPUTS * DATA_WIDTH - 1 : 0] data_bus;
+    logic [$clog2(NUM_INPUTS) - 1 : 0] select;
     logic [DATA_WIDTH - 1 : 0] output_data;
 
     mux #(

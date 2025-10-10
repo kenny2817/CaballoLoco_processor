@@ -1,44 +1,33 @@
-`timescale 1ns/1ps
-
 module pci_tb;
 
-    logic clk;
-    logic sel;
-    logic [7:0] immediate;
-    logic [7:0] pc;
+    localparam REG_WIDTH = 32;
 
-    pci uut (
-        .clk(clk),
-        .sel(sel),
-        .immediate(immediate),
-        .pc(pc)
+    logic clk = 0;
+    logic select = 0;
+    logic [REG_WIDTH -1 : 0] offset = '0, pc = '0, new_pc;
+
+    pci #(
+        .REG_WIDTH(REG_WIDTH)
+    ) dut (
+        .i_select(select),
+        .i_offset(offset),
+        .i_pc(pc),
+        .o_pc(new_pc)
     );
 
-    always #5 clk = ~clk;
+    always #10 pc = new_pc;
 
     initial begin
-        clk = 0;
-        sel = 0;
-        immediate = 8'd0;
-
+        offset = 8'd42;
         #10;
-        immediate = 8'd42;
-        sel = 0;
+        select = 1;
         #10;
-        $display("Caricato PC = %0d (atteso 42)", pc);
+        select = 0;
+        #100;
 
-        sel = 1;
-        #40;
-        $display("Dopo incremento, PC = %0d (atteso 46)", pc);
-
-        sel = 0;
-        immediate = 8'd100;
-        #10;
-        $display("Caricato PC = %0d (atteso 100)", pc);
-
-        #20;
-        $display("Test completato!");
-        $stop;
+        $finish;
     end
+
+    initial $monitor("t=%4t | sel= %b | off=%4d | pc=%4d |", $time, select, offset, new_pc);
 
 endmodule

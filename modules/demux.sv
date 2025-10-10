@@ -1,12 +1,11 @@
 module demux #(
-    parameter NUM_OUTPUTS,
-    localparam SELECT_BITS = $clog2(NUM_OUTPUTS)
-)
-(
-    input wire [SELECT_BITS - 1 : 0] i_select,
-    input wire i_enable,
-    output reg [NUM_OUTPUTS - 1 : 0] o_output
+    parameter NUM_OUTPUTS
+) (
+    input logic [SELECT_BITS - 1 : 0] i_select,
+    input logic i_enable,
+    output logic [NUM_OUTPUTS - 1 : 0] o_output
 );
+    localparam SELECT_BITS = $clog2(NUM_OUTPUTS);
     always_comb begin
         o_output = '0;
 

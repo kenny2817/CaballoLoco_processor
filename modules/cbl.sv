@@ -14,16 +14,17 @@ module cbl #(
 );
 
 // CABLE MANAGEMENT
-    logic [PC_WIDTH -1 : 0] pc_0, [PC_WIDTH -1 : 0] pc_1, [PC_WIDTH -1 : 0] pc_2;
-    logic [INSTR_WIDTH -1 : 0] instruction_0, [INSTR_WIDTH -1 : 0] instruction_1;
+    logic [PC_WIDTH -1 : 0] pc_0, pc_1, pc_2;
+    logic [INSTR_WIDTH -1 : 0] instruction_0, instruction_1;
     logic [NUM_REG * REG_WIDTH - 1 : 0] reg;
-    logic [REG_WIDTH -1 : 0] reg_A_0, [REG_WIDTH -1 : 0] reg_A_1;
-    logic [REG_WIDTH -1 : 0] reg_B_0, [REG_WIDTH -1 : 0] reg_B_1;
-    logic [REG_WIDTH -1 : 0] a_0, [REG_WIDTH -1 : 0] a_1;
-    logic [REG_WIDTH -1 : 0] b_0, [REG_WIDTH -1 : 0] b_1;
-    logic [REG_WIDTH -1 : 0] alu_0, [REG_WIDTH -1 : 0] alu_1;
-    logic [NUM_MEM * REG_WIDTH -1 : 0] mem_0, [REG_WIDTH -1 : 0] mem_1;
-    logic [REG_WIDTH -1 : 0] reg_data_0, [REG_WIDTH -1 : 0] reg_data_1;
+    logic [REG_WIDTH -1 : 0] reg_A_0, reg_A_1;
+    logic [REG_WIDTH -1 : 0] reg_B_0, reg_B_1;
+    logic [REG_WIDTH -1 : 0] a_0, a_1;
+    logic [REG_WIDTH -1 : 0] b_0, b_1;
+    logic [REG_WIDTH -1 : 0] alu_0, alu_1;
+    logic [NUM_MEM * REG_WIDTH -1 : 0] mem_0;
+    logic [REG_WIDTH -1 : 0] mem_1;
+    logic [REG_WIDTH -1 : 0] reg_data_0, reg_data_1;
 
 // PC
     register #(

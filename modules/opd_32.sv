@@ -10,7 +10,7 @@ module opd_32 #(
     output logic [REG_SELECT -1 : 0] o_select_a,
     output logic [REG_SELECT -1 : 0] o_select_b,
     output logic [REG_SELECT -1 : 0] o_select_c,
-    output logic o_is_write_back,
+    output logic o_is_write,
     output logic o_is_load,
     output logic o_is_store,
     output logic o_is_cmp,
@@ -41,7 +41,7 @@ module opd_32 #(
     always_comb begin
         case (opcode)
             ADD_OP: begin
-                o_is_write_back = '1;
+                o_is_write = '1;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '0;
@@ -50,7 +50,7 @@ module opd_32 #(
                 o_offset = 'x;
             end
             SUB_OP: begin
-                o_is_write_back = '1;
+                o_is_write = '1;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '0;
@@ -59,7 +59,7 @@ module opd_32 #(
                 o_offset = 'x;
             end
             AND_OP: begin
-                o_is_write_back = '1;
+                o_is_write = '1;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '0;
@@ -68,7 +68,7 @@ module opd_32 #(
                 o_offset = 'x;
             end
             OR_OP: begin
-                o_is_write_back = '1;
+                o_is_write = '1;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '0;
@@ -77,7 +77,7 @@ module opd_32 #(
                 o_offset = 'x;
             end
             MUL_OP: begin
-                o_is_write_back = '1;
+                o_is_write = '1;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '0;
@@ -86,7 +86,7 @@ module opd_32 #(
                 o_offset = 'x;
             end
             DIV_OP: begin
-                o_is_write_back = '1;
+                o_is_write = '1;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '0;
@@ -95,7 +95,7 @@ module opd_32 #(
                 o_offset = 'x;
             end
             XOR_OP: begin
-                o_is_write_back = '1;
+                o_is_write = '1;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '0;
@@ -104,7 +104,7 @@ module opd_32 #(
                 o_offset = 'x;
             end
             LW_OP: begin
-                o_is_write_back = '1;
+                o_is_write = '1;
                 o_is_load = '1;
                 o_is_store = '0;
                 o_is_cmp = '0;
@@ -113,7 +113,7 @@ module opd_32 #(
                 o_offset = offset_lw;
             end
             SW_OP: begin
-                o_is_write_back = '0;
+                o_is_write = '0;
                 o_is_load = '0;
                 o_is_store = '1;
                 o_is_cmp = '0;
@@ -122,7 +122,7 @@ module opd_32 #(
                 o_offset = offset_st;
             end
             BEQ_OP: begin
-                o_is_write_back = '0;
+                o_is_write = '0;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '1;
@@ -131,7 +131,7 @@ module opd_32 #(
                 o_offset = offset_br;
             end
             BLT_OP: begin
-                o_is_write_back = '0;
+                o_is_write = '0;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '1;
@@ -140,7 +140,7 @@ module opd_32 #(
                 o_offset = offset_br;
             end
             BLE_OP: begin
-                o_is_write_back = '0;
+                o_is_write = '0;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '1;
@@ -150,7 +150,7 @@ module opd_32 #(
             end
             default: begin
                 // not recognized -> do nothing
-                o_is_write_back = '0;
+                o_is_write = '0;
                 o_is_load = '0;
                 o_is_store = '0;
                 o_is_cmp = '0;

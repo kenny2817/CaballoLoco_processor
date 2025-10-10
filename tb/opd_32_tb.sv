@@ -14,7 +14,7 @@ module opd_32_tb;
     logic [REG_SELECT -1 : 0] select_a;
     logic [REG_SELECT -1 : 0] select_b;
     logic [REG_SELECT -1 : 0] select_c;
-    logic is_write_back;
+    logic is_write;
     logic is_load;
     logic is_store;
     logic is_cmp;
@@ -29,7 +29,7 @@ module opd_32_tb;
         .o_select_a(select_a),
         .o_select_b(select_b),
         .o_select_c(select_c),
-        .o_is_write_back(is_write_back),
+        .o_is_write(is_write),
         .o_is_load(is_load),
         .o_is_store(is_store),
         .o_is_cmp(is_cmp),
@@ -49,8 +49,8 @@ module opd_32_tb;
     end
 
     initial begin
-        $monitor("t=%3t | instr=%b | sel_a=%d | sel_b=%d | sel_c=%d | iwb=%b | il=%b | is=%b | icmp=%b | cmp_op=%b | alu_op=%b | off=%d | op=%d", 
-                  $time, instruction, select_a, select_b, select_c, is_write_back, is_load, is_store, is_cmp, cmp_op, alu_op, offset, dut.opcode);
+        $monitor("t=%3t | instr=%b | sel_a=%d | sel_b=%d | sel_c=%d | iw=%b | il=%b | is=%b | icmp=%b | cmp_op=%b | alu_op=%b | off=%d | op=%d", 
+                  $time, instruction, select_a, select_b, select_c, is_write, is_load, is_store, is_cmp, cmp_op, alu_op, offset, dut.opcode);
     end
 
 endmodule
