@@ -9,7 +9,6 @@ module alu #(
     output logic [DATA_WIDTH - 1 : 0] o_output
 );
     always_comb begin
-    o_output = '0;
         case (i_op)
             ADD: o_output = (i_elemA + i_elemB);
             SUB: o_output = (i_elemA - i_elemB);
