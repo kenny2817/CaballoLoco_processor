@@ -11,15 +11,18 @@ The fastest processor whenever Will Smith is in the backstage.
 - [x] demultiplexer - demux
 - [x] multiplexer - mux
 - [x] register - reg
+- [/] register_mono - rmo
+- [x] register bank - rbk
 
 ### LOGIC
 
 Everything not strictly necessary.
 
 - [x] comparator - cmp
-- [ ] opcode decoder -
+- [x] opcode decoder -
 - [ ] exeption handler -
-- [ ] main logic - cbl (CaBalloLoco)
+- [ ] main logic - cbl (CaBalloLoco) pipelined + cache?
+- [x] main logic - cbs (CaBalloSano) single-cycle
 
 ### OPCODES
 
@@ -29,9 +32,9 @@ Some possibilities that came to my mind, we should sort and implement at least 5
 - [x] subtraction - sub
 - [x] or
 - [x] and
-- [ ] xor
-- [ ] load word - lw
-- [ ] store word - sw
+- [x] xor
+- [x] load word - lw
+- [x] store word - sw
 - [ ] branch equal - beq
 - [ ] branch less - blt
 - [ ] branch less or equal - ble

@@ -40,12 +40,3 @@ S: $(PKG_DIR)/alu_pkg.sv $(PKG_DIR)/cmp_pkg.sv $(PKG_DIR)/opcodes_pkg.sv  $(MODU
 
 clean:
 	rm -f $(TARGETS)
-
-VFLAGS = -sv --cc --exe -CFLAGS "-std=c++17" --timing
-
-cbs_v: $(PKG_DIR)/alu_pkg.sv $(PKG_DIR)/cmp_pkg.sv $(PKG_DIR)/opcodes_pkg.sv \
-     $(MODULES_DIR)/cbs.sv $(MODULES_DIR)/register.sv $(MODULES_DIR)/pci.sv \
-     $(MODULES_DIR)/mux.sv $(MODULES_DIR)/opd_32.sv $(MODULES_DIR)/register_bank.sv \
-     $(MODULES_DIR)/alu.sv $(MODULES_DIR)/cmp.sv $(TB_DIR)/cbs_tb.sv
-	verilator $(VFLAGS) -o $@ $^
-	make -C obj_dir -f Vcbs.mk Vcbs
