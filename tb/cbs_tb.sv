@@ -67,14 +67,15 @@ module cbs_tb;
         instructions[1 * REG_WIDTH +: REG_WIDTH] = {LW_OP, 3'd0, 3'd0, 3'd1, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         instructions[2 * REG_WIDTH +: REG_WIDTH] = {ADD_OP, 3'd1, 3'd0, 3'd2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         instructions[3 * REG_WIDTH +: REG_WIDTH] = {SW_OP, 3'd2, 3'd2, 3'd0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        instructions[4 * REG_WIDTH +: REG_WIDTH] = {BEQ_OP, 3'd2, 3'd2, 3'd0, {{(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT -2){1'b0}}, 2'd1}};
+        instructions[8 * REG_WIDTH +: REG_WIDTH] = {ADD_OP, 3'd1, 3'd0, 3'd2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         rst = 1;
-        fake_select = 0; fake_word = 1;
-        #10;
-        fake_select = 1; fake_word = 2;
-        #10;
+        fake_select = 0; fake_word = 1; #10;
+        fake_select = 1; fake_word = 2; #10;
         rst = 0;
         $monitoron;
         #100;
+
         $finish;
     end
 
