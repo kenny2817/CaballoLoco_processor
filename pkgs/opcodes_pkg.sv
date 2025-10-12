@@ -15,7 +15,8 @@ package opcodes_pkg;
         SW_OP,  // op + ra + rb + offset
         BEQ_OP, // op + ra + rb + offset
         BLT_OP, // op + ra + rb + offset
-        BLE_OP  // op + ra + rb + offset
+        BLE_OP, // op + ra + rb + offset
+        JMP_OP  // op + offset
     } opcodes_e;
     
 endpackage

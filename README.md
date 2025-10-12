@@ -37,6 +37,6 @@ Some possibilities that came to my mind, we should sort and implement at least 5
 - [x] branch equal - beq
 - [x] branch less - blt
 - [x] branch less or equal - ble
-- [ ] jump
+- [x] jump
 - [ ] shift left - shl
 - [ ] shift right - shr
