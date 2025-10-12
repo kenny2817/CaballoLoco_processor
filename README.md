@@ -11,7 +11,6 @@ The fastest processor whenever Will Smith is in the backstage.
 - [x] demultiplexer - demux
 - [x] multiplexer - mux
 - [x] register - reg
-- [/] register_mono - rmo
 - [x] register bank - rbk
 
 ### LOGIC
@@ -35,9 +34,9 @@ Some possibilities that came to my mind, we should sort and implement at least 5
 - [x] xor
 - [x] load word - lw
 - [x] store word - sw
-- [ ] branch equal - beq
-- [ ] branch less - blt
-- [ ] branch less or equal - ble
+- [x] branch equal - beq
+- [x] branch less - blt
+- [x] branch less or equal - ble
 - [ ] jump
 - [ ] shift left - shl
 - [ ] shift right - shr

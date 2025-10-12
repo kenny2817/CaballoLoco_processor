@@ -1,4 +1,5 @@
 package cmp_pkg;
+
     localparam CMP_OP_COUNT = 4;
     localparam CMP_OP_WIDTH = $clog2(CMP_OP_COUNT);
 

@@ -6,7 +6,6 @@ module opd_32 #(
     parameter NUM_REG
 ) (
     input logic [REG_WIDTH -1 : 0] i_instruction,
-    // OUTPUT: SEL_A SEL_B SEL_C OFFSET IS_WRITE_BACK MEM CMP_OP ALU_OP IS_STORE
     output logic [REG_SELECT -1 : 0] o_select_a,
     output logic [REG_SELECT -1 : 0] o_select_b,
     output logic [REG_SELECT -1 : 0] o_select_c,
@@ -160,4 +159,45 @@ module opd_32 #(
             end
         endcase 
     end
+endmodule
+
+
+module opd_32_tb;
+
+    localparam NUM_REG = 32;
+    localparam REG_WIDTH = 32;
+    localparam REG_SELECT = $clog2(NUM_REG);
+
+    logic [REG_WIDTH -1 : 0] instruction, offset;
+    logic [REG_SELECT -1 : 0] select_a, select_b, select_c;
+    logic is_write, is_load, is_store, is_cmp;
+    cmp_op_e cmp_op;
+    alu_op_e alu_op;
+    
+    opd_32 #(
+        .NUM_REG(NUM_REG)
+    ) dut (
+        .i_instruction(instruction),   
+        .o_select_a(select_a),
+        .o_select_b(select_b),
+        .o_select_c(select_c),
+        .o_is_write(is_write),
+        .o_is_load(is_load),
+        .o_is_store(is_store),
+        .o_is_cmp(is_cmp),
+        .o_cmp_op(cmp_op),
+        .o_alu_op(alu_op),
+        .o_offset(offset)   
+    );
+
+    initial begin
+        #10;
+        instruction = {ADD_OP, 5'd5, 5'd5, 5'd2, {(REG_WIDTH - OPCODES_WIDTH - REG_SELECT * 3){1'b0}}}; #10;
+        instruction = {SUB_OP, 5'd6, 5'd5, 5'd3, {(REG_WIDTH - OPCODES_WIDTH - REG_SELECT * 3){1'b0}}}; #10;
+        $finish;
+    end
+
+    initial $monitor("t=%3t | instr=%b | sel_a=%d | sel_b=%d | sel_c=%d | iw=%b | il=%b | is=%b | icmp=%b | cmp_op=%b | alu_op=%b | off=%d | op=%d", 
+        $time, instruction, select_a, select_b, select_c, is_write, is_load, is_store, is_cmp, cmp_op, alu_op, offset, dut.opcode);
+
 endmodule

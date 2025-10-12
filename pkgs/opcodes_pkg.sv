@@ -1,4 +1,5 @@
 package opcodes_pkg;
+
     localparam NUM_OPCODES = 12;
     localparam OPCODES_WIDTH = $clog2(NUM_OPCODES);
 
@@ -10,7 +11,7 @@ package opcodes_pkg;
         MUL_OP, // op + ra + rb + rc
         DIV_OP, // op + ra + rb + rc
         XOR_OP, // op + ra + rb + rc
-        LW_OP,  // op + ra + rb + offset
+        LW_OP,  // op + ra + offset + rc + offset
         SW_OP,  // op + ra + rb + offset
         BEQ_OP, // op + ra + rb + offset
         BLT_OP, // op + ra + rb + offset
