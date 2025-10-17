@@ -2,8 +2,10 @@ mux
 demux
 cmp
 register
+register_mono
 alu
 opd_32
 pci
 register_bank
+register_bank_mono
 cbs

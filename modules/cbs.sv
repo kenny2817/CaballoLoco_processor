@@ -11,11 +11,7 @@ module cbs #(
 ) (
     input logic clk,
     input logic rst,
-    input logic [NUM_INSTR * REG_WIDTH -1 : 0] i_instructions,
-    input logic [NUM_MEM * REG_WIDTH -1 : 0] i_mem,
-    output logic o_mem_store_enable,
-    output logic [MEM_SELECT -1 : 0] o_mem_store_select,
-    output logic [REG_WIDTH -1 : 0] o_mem_store_word
+    input logic [REG_WIDTH -1 : 0] i_instructions [NUM_INSTR]
 );
     localparam REG_SELECT = $clog2(NUM_REG);
     localparam INSTR_SELECT = $clog2(NUM_INSTR);
@@ -24,8 +20,7 @@ module cbs #(
     logic [INSTR_SELECT -1 : 0] pc, new_pc;
     logic [REG_WIDTH -1 : 0] instruction, alu_data, new_reg, mem_data, reg_a, reg_b, a, b, offset;
     logic [REG_SELECT -1 : 0] reg_a_select, reg_b_select, reg_c_select;
-    logic [NUM_REG * REG_WIDTH -1 : 0] regs;
-    // logic [NUM_MEM * REG_WIDTH -1 : 0] mems;
+    wire [REG_WIDTH -1 : 0] regs [NUM_REG];
     logic is_write, is_load, is_store, is_cmp, cmp_data;
     alu_op_e alu_op;
     cmp_op_e cmp_op;
@@ -34,9 +29,8 @@ module cbs #(
     assign o_mem_store_select = alu_data;
     assign o_mem_store_word = reg_b;
     // PROGRAM COUNTER
-    register #(
-        .DATA_WIDTH(INSTR_SELECT),
-        .NUM_REG(1)
+    register_mono #(
+        .DATA_WIDTH(INSTR_SELECT)
     ) PC (
         .clk(clk),
         .rst(rst),
@@ -50,7 +44,7 @@ module cbs #(
         .REG_WIDTH(INSTR_SELECT)
     ) PCI (
         .i_select(cmp_data),
-        .i_offset(offset[INSTR_SELECT -1 : 0]),
+        .i_offset(alu_data[INSTR_SELECT -1 : 0]),
         .i_pc(pc),
         .o_pc(new_pc)
     );
@@ -105,14 +99,7 @@ module cbs #(
         .o_output(reg_a)
     );
 
-    mux #(
-        .NUM_INPUTS(2),
-        .DATA_WIDTH(REG_WIDTH)
-    ) MUX_REG_A_1 (
-        .i_data_bus({{(REG_WIDTH - INSTR_SELECT){1'b0}}, pc, reg_a}),
-        .i_select(is_cmp),
-        .o_output(a)
-    );
+    assign a = (is_cmp) ? {{(REG_WIDTH - INSTR_SELECT){1'b0}}, pc} : reg_a;
 
     // REGISTER B
     mux #(
@@ -124,14 +111,7 @@ module cbs #(
         .o_output(reg_b)
     );
 
-    mux #(
-        .NUM_INPUTS(2),
-        .DATA_WIDTH(REG_WIDTH)
-    ) MUX_REG_B_1 (
-        .i_data_bus({offset, reg_b}),
-        .i_select(is_store || is_load || is_cmp),
-        .o_output(b)
-    );
+    assign b = (is_store | is_load | is_cmp) ? offset : reg_b;
 
     // ALU
     alu #(
@@ -144,24 +124,19 @@ module cbs #(
     );
 
     // MEMORY
-    mux #(
-        .NUM_INPUTS(NUM_MEM),
-        .DATA_WIDTH(REG_WIDTH)
-    ) MUX_MEM (
-        .i_data_bus(i_mem),
+    register_bank_mono #(
+        .DATA_WIDTH(REG_WIDTH),
+        .NUM_REG(NUM_MEM)
+    ) MEM (
+        .clk(clk),
+        .i_write_enable(is_store),
         .i_select(alu_data[MEM_SELECT -1 : 0]),
-        .o_output(mem_data)
-    );
+        .i_write_data(reg_b),
+        .o_read_data(mem_data)
+    );    
 
     // MUX {ALU MEM}
-    mux #(
-        .NUM_INPUTS(2),
-        .DATA_WIDTH(REG_WIDTH)
-    ) MUX_ALU_MEM (
-        .i_data_bus({mem_data, alu_data}),
-        .i_select(is_load),
-        .o_output(new_reg)
-    );
+    assign new_reg = is_load ? mem_data : alu_data;
 
     // CMP
     cmp #(
@@ -186,35 +161,7 @@ module cbs_tb;
     localparam MEM_SELECT = $clog2(NUM_MEM);
 
     logic clk = 0, rst, display = 0;
-    logic [NUM_INSTR * REG_WIDTH -1 : 0] instructions;
-
-    logic mem_store_enable, write_enable;
-    logic [MEM_SELECT -1 : 0] mem_store_select, write_select, fake_select;
-    logic [REG_WIDTH -1 : 0] mem_store_word, write_data, fake_word;
-    logic [NUM_MEM * REG_WIDTH -1 : 0] mem;
-
-    always_comb begin
-        if (rst) begin
-            write_enable = 1;
-            write_select = fake_select;
-            write_data   = fake_word;
-        end else begin
-            write_enable = mem_store_enable;
-            write_select = mem_store_select;
-            write_data   = mem_store_word;
-        end
-    end
-
-    register_bank #(
-        .DATA_WIDTH(REG_WIDTH),
-        .NUM_REG(NUM_MEM)
-    ) MEM (
-        .clk(clk),
-        .i_write_enable(write_enable),
-        .i_write_select(write_select),
-        .i_write_data(write_data),
-        .o_read_data(mem)
-    );    
+    logic [REG_WIDTH -1 : 0] instructions [NUM_INSTR];
 
     cbs #(
         .NUM_REG(NUM_REG),
@@ -224,35 +171,39 @@ module cbs_tb;
     ) dut (
         .clk(clk),
         .rst(rst),
-        .i_instructions(instructions),
-        .i_mem(mem),
-        .o_mem_store_enable(mem_store_enable),
-        .o_mem_store_select(mem_store_select),
-        .o_mem_store_word(mem_store_word)
+        .i_instructions(instructions)
     );
 
     always #5 clk = ~clk;
     always #10 display = ~display;
 
+    localparam REG_0 = 3'd0; 
+    localparam REG_1 = 3'd1; 
+    localparam REG_2 = 3'd2; 
+
     initial begin
         $monitoroff;
-        instructions[0 * REG_WIDTH +: REG_WIDTH] = {LW_OP, 3'd0, 3'd0, 3'd0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        instructions[1 * REG_WIDTH +: REG_WIDTH] = {LW_OP, 3'd0, 3'd0, 3'd1, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        instructions[2 * REG_WIDTH +: REG_WIDTH] = {ADD_OP, 3'd1, 3'd0, 3'd2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        instructions[3 * REG_WIDTH +: REG_WIDTH] = {SW_OP, 3'd2, 3'd2, 3'd0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        instructions[4 * REG_WIDTH +: REG_WIDTH] = {BEQ_OP, 3'd2, 3'd2, 3'd0, {{(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT -2){1'b0}}, 2'd1}};
-        instructions[8 * REG_WIDTH +: REG_WIDTH] = {ADD_OP, 3'd1, 3'd0, 3'd2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        rst = 1;
-        fake_select = 0; fake_word = 1; #10;
-        fake_select = 1; fake_word = 2; #10;
+        dut.MEM.data[0] = 32'd1;
+        dut.MEM.data[1] = 32'd2;
+        instructions[0] = {LW_OP,  REG_0, REG_0, REG_0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        instructions[1] = {LW_OP,  REG_0, REG_0, REG_1, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        instructions[2] = {ADD_OP, REG_1, REG_0, REG_2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        instructions[3] = {SW_OP,  REG_2, REG_2, REG_0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        instructions[4] = {BEQ_OP, REG_2, REG_2, REG_0, {{(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT -2){1'b0}}, 2'd1}};
+        instructions[8] = {ADD_OP, REG_1, REG_0, REG_2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        rst = 1; #10;
         rst = 0;
         $monitoron;
-        #100;
+        #101;
 
         $finish;
     end
 
-    initial $monitor("t=%3t | pc= %2d | ist=%b | rega=%b a=%b | regb=%b b=%b | alu=%b | reg=%b | mem %b", 
-                $time, dut.pc,dut.instruction, dut.reg_a, dut.a, dut.reg_b, dut.b, dut.alu_data, dut.regs, mem);
+    initial $monitor("t=%3t | pc= %2d | ist=%b | reg_a=%3d a=%3d | reg_b=%3d b=%3d | reg_c=%3d | write=%b | alu=%7d | regs=%3d %3d %3d %3d %3d | mem=%3d %3d %3d %3d %3d | new_reg=%3d | offset=%3d | sele_instr=%d", 
+        $time, dut.pc,dut.instruction, dut.reg_a, dut.a, dut.reg_b, dut.b, dut.reg_c_select, dut.is_write, dut.alu_data,
+        dut.REGISTERS.data[0], dut.REGISTERS.data[1], dut.REGISTERS.data[2], dut.REGISTERS.data[3], dut.REGISTERS.data[4], 
+        dut.MEM.data[0], dut.MEM.data[1], dut.MEM.data[2], dut.MEM.data[3], dut.MEM.data[4],
+        dut.new_reg, dut.offset, dut.INSTR_SELECT
+    );
 
 endmodule
