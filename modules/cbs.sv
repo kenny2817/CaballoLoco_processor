@@ -10,8 +10,7 @@ module cbs #(
     parameter NUM_MEM
 ) (
     input logic clk,
-    input logic rst,
-    input logic [REG_WIDTH -1 : 0] i_instructions [NUM_INSTR]
+    input logic rst
 );
     localparam REG_SELECT = $clog2(NUM_REG);
     localparam INSTR_SELECT = $clog2(NUM_INSTR);
@@ -25,9 +24,6 @@ module cbs #(
     alu_op_e alu_op;
     cmp_op_e cmp_op;
 
-    assign o_mem_store_enable = is_store;
-    assign o_mem_store_select = alu_data;
-    assign o_mem_store_word = reg_b;
     // PROGRAM COUNTER
     register_mono #(
         .DATA_WIDTH(INSTR_SELECT)
@@ -49,14 +45,17 @@ module cbs #(
         .o_pc(new_pc)
     );
 
-    // INSTRUCTION
-    mux #(
-        .NUM_INPUTS(NUM_INSTR),
-        .DATA_WIDTH(REG_WIDTH)
-    ) MUX_INSTRUCTION (
-        .i_data_bus(i_instructions),
+    // INSTRUCTIONS
+    register_bank_mono #( 
+        .DATA_WIDTH(REG_WIDTH),
+        .NUM_REG(NUM_INSTR)
+    ) INSTRUCTIONS (
+        .clk(clk),
+        .rst(rst),
+        .i_write_enable(1'b0),
         .i_select(pc),
-        .o_output(instruction)
+        .i_write_data('x),
+        .o_read_data(instruction)
     );
 
     // OPCODE DECODER
@@ -129,6 +128,7 @@ module cbs #(
         .NUM_REG(NUM_MEM)
     ) MEM (
         .clk(clk),
+        .rst(rst),
         .i_write_enable(is_store),
         .i_select(alu_data[MEM_SELECT -1 : 0]),
         .i_write_data(reg_b),
@@ -160,8 +160,7 @@ module cbs_tb;
     localparam REG_SELECT = $clog2(NUM_REG);
     localparam MEM_SELECT = $clog2(NUM_MEM);
 
-    logic clk = 0, rst, display = 0;
-    logic [REG_WIDTH -1 : 0] instructions [NUM_INSTR];
+    logic clk = 0, rst;
 
     cbs #(
         .NUM_REG(NUM_REG),
@@ -170,40 +169,39 @@ module cbs_tb;
         .NUM_MEM(NUM_MEM)
     ) dut (
         .clk(clk),
-        .rst(rst),
-        .i_instructions(instructions)
+        .rst(rst)
     );
 
     always #5 clk = ~clk;
-    always #10 display = ~display;
 
     localparam REG_0 = 3'd0; 
     localparam REG_1 = 3'd1; 
     localparam REG_2 = 3'd2; 
+    localparam REG_3 = 3'd3; 
+    localparam REG_4 = 3'd4; 
 
     initial begin
         $monitoroff;
-        dut.MEM.data[0] = 32'd1;
-        dut.MEM.data[1] = 32'd2;
-        instructions[0] = {LW_OP,  REG_0, REG_0, REG_0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        instructions[1] = {LW_OP,  REG_0, REG_0, REG_1, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        instructions[2] = {ADD_OP, REG_1, REG_0, REG_2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        instructions[3] = {SW_OP,  REG_2, REG_2, REG_0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        instructions[4] = {BEQ_OP, REG_2, REG_2, REG_0, {{(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT -2){1'b0}}, 2'd1}};
-        instructions[8] = {ADD_OP, REG_1, REG_0, REG_2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
-        rst = 1; #10;
-        rst = 0;
+        rst = 1; #1; rst = 0;
+        dut.MEM.data[0] = 32'd1; dut.MEM.data[1] = 32'd2;
+        dut.INSTRUCTIONS.data[0] = {LW_OP,  REG_0, REG_0, REG_4, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        dut.INSTRUCTIONS.data[1] = {LW_OP,  REG_0, REG_0, REG_0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        dut.INSTRUCTIONS.data[2] = {LW_OP,  REG_0, REG_0, REG_1, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        dut.INSTRUCTIONS.data[3] = {ADD_OP, REG_1, REG_0, REG_2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        dut.INSTRUCTIONS.data[4] = {SW_OP,  REG_2, REG_2, REG_0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        dut.INSTRUCTIONS.data[5] = {BEQ_OP, REG_2, REG_2, REG_0, {{(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT -2){1'b0}}, 2'd1}};
+        dut.INSTRUCTIONS.data[8] = {ADD_OP, REG_1, REG_0, REG_2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         $monitoron;
-        #101;
+        #95;
 
         $finish;
     end
 
-    initial $monitor("t=%3t | pc= %2d | ist=%b | reg_a=%3d a=%3d | reg_b=%3d b=%3d | reg_c=%3d | write=%b | alu=%7d | regs=%3d %3d %3d %3d %3d | mem=%3d %3d %3d %3d %3d | new_reg=%3d | offset=%3d | sele_instr=%d", 
+    initial $monitor("t=%3t | pc= %2d | ist=%b | reg_a=%3d a=%3d | reg_b=%3d b=%3d | reg_c=%3d | write=%b | alu=%7d | regs=%3d %3d %3d %3d %3d | mem=%3d %3d %3d %3d %3d | new_reg=%3d | offset=%3d |", 
         $time, dut.pc,dut.instruction, dut.reg_a, dut.a, dut.reg_b, dut.b, dut.reg_c_select, dut.is_write, dut.alu_data,
         dut.REGISTERS.data[0], dut.REGISTERS.data[1], dut.REGISTERS.data[2], dut.REGISTERS.data[3], dut.REGISTERS.data[4], 
         dut.MEM.data[0], dut.MEM.data[1], dut.MEM.data[2], dut.MEM.data[3], dut.MEM.data[4],
-        dut.new_reg, dut.offset, dut.INSTR_SELECT
+        dut.new_reg, dut.offset
     );
 
 endmodule

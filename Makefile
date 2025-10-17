@@ -1,4 +1,4 @@
-IFLAGS = -g2012
+IFLAGS = -g2012 -Wall
 MODULES_DIR = modules
 PKG_DIR = pkgs
 PKGS = $(PKG_DIR)/alu_pkg.sv $(PKG_DIR)/cmp_pkg.sv $(PKG_DIR)/opcodes_pkg.sv
