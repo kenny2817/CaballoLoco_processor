@@ -193,7 +193,6 @@ module cbs_tb;
         dut.INSTRUCTIONS.data[8] = {ADD_OP, REG_1, REG_0, REG_2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         $monitoron;
         #95;
-
         $finish;
     end
 
