@@ -9,3 +9,7 @@ pci
 register_bank
 register_bank_mono
 cbs
+cbl
+fwd
+haz
+pipes

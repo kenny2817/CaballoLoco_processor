@@ -55,6 +55,7 @@ module cbs #(
         .i_write_enable(1'b0),
         .i_select(pc),
         .i_write_data('x),
+        
         .o_read_data(instruction)
     );
 
@@ -62,7 +63,9 @@ module cbs #(
     opd_32 #(
         .NUM_REG(NUM_REG)
     ) OPD_32 (
-        .i_instruction(instruction),   
+        .i_instruction(instruction),  
+        .i_nop(1'b0),
+
         .o_select_a(reg_a_select),
         .o_select_b(reg_b_select),
         .o_select_c(reg_c_select),
@@ -89,26 +92,12 @@ module cbs #(
     );
 
     // REGISTER A
-    mux #(
-        .NUM_INPUTS(NUM_REG),
-        .DATA_WIDTH(REG_WIDTH)
-    ) MUX_REG_A_0 (
-        .i_data_bus(regs),
-        .i_select(reg_a_select),
-        .o_output(reg_a)
-    );
+    assign reg_a = regs[reg_a_select];
 
     assign a = (is_cmp) ? {{(REG_WIDTH - INSTR_SELECT){1'b0}}, pc} : reg_a;
 
     // REGISTER B
-    mux #(
-        .NUM_INPUTS(NUM_REG),
-        .DATA_WIDTH(REG_WIDTH)
-    ) MUX_REG_B_0 (
-        .i_data_bus(regs),
-        .i_select(reg_b_select),
-        .o_output(reg_b)
-    );
+    assign reg_b = regs[reg_b_select];
 
     assign b = (is_store | is_load | is_cmp) ? offset : reg_b;
 

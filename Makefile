@@ -2,10 +2,11 @@ IFLAGS = -g2012 -Wall
 MODULES_DIR = modules
 PKG_DIR = pkgs
 PKGS = $(PKG_DIR)/alu_pkg.sv $(PKG_DIR)/cmp_pkg.sv $(PKG_DIR)/opcodes_pkg.sv
-TARGETS = mux demux cmp register alu register_bank pci opd_32 cbs register_mono register_bank_mono
+TARGETS = mux demux cmp register alu register_bank pci opd_32 cbs register_mono register_bank_mono cbl haz fwd pipes
 
 define IVERILOG_COMPILE
-    iverilog $(IFLAGS) -s $@_tb -o $@ $^
+	@iverilog $(IFLAGS) -s $@_tb -o $@ $^ || (echo "failed - $@"; exit 1)
+	@echo "success - $@"
 endef
 
 .PHONY: all $(TARGETS) clean
@@ -42,7 +43,19 @@ opd_32: ${PKGS}  $(MODULES_DIR)/opd_32.sv
 cbs: ${PKGS} $(MODULES_DIR)/cbs.sv $(MODULES_DIR)/register.sv $(MODULES_DIR)/register_mono.sv $(MODULES_DIR)/pci.sv $(MODULES_DIR)/mux.sv $(MODULES_DIR)/opd_32.sv $(MODULES_DIR)/register_bank.sv $(MODULES_DIR)/register_bank_mono.sv $(MODULES_DIR)/alu.sv $(MODULES_DIR)/cmp.sv
 	${IVERILOG_COMPILE}
 
+cbl: ${PKGS} $(MODULES_DIR)/cbl.sv $(MODULES_DIR)/forwarding.sv $(MODULES_DIR)/pipes.sv $(MODULES_DIR)/hazard.sv $(MODULES_DIR)/register.sv $(MODULES_DIR)/register_mono.sv $(MODULES_DIR)/pci.sv $(MODULES_DIR)/mux.sv $(MODULES_DIR)/opd_32.sv $(MODULES_DIR)/register_bank.sv $(MODULES_DIR)/register_bank_mono.sv $(MODULES_DIR)/alu.sv $(MODULES_DIR)/cmp.sv
+	${IVERILOG_COMPILE}
+
 register_mono: $(MODULES_DIR)/register_mono.sv
+	${IVERILOG_COMPILE}
+
+haz: ${PKGS}  $(MODULES_DIR)/hazard.sv
+	${IVERILOG_COMPILE}
+
+fwd: ${PKGS}  $(MODULES_DIR)/forwarding.sv
+	${IVERILOG_COMPILE}
+
+pipes: ${PKGS}  $(MODULES_DIR)/pipes.sv
 	${IVERILOG_COMPILE}
 
 S: ${PKGS}  $(MODULES_DIR)/S.sv

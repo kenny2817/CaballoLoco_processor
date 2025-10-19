@@ -6,6 +6,8 @@ module opd_32 #(
     parameter NUM_REG
 ) (
     input logic [REG_WIDTH -1 : 0] i_instruction,
+    input logic i_nop,
+
     output logic [REG_SELECT -1 : 0] o_select_a,
     output logic [REG_SELECT -1 : 0] o_select_b,
     output logic [REG_SELECT -1 : 0] o_select_c,
@@ -23,7 +25,8 @@ module opd_32 #(
     localparam IMMEDIATE_WIDTH = REG_WIDTH - OPCODES_WIDTH - 2 * REG_SELECT;
 
     opcodes_e opcode;
-    assign opcode = opcodes_e'(i_instruction[REG_WIDTH -1 -: OPCODES_WIDTH]);
+    assign opcode = opcodes_e'((i_nop) ? NOP_OP : i_instruction[REG_WIDTH -1 -: OPCODES_WIDTH]);
+
 
     logic [REG_WIDTH -1 : 0] offset_lw, offset_st, offset_br, offset_jp;
     assign offset_lw = {
@@ -169,12 +172,21 @@ module opd_32 #(
                 o_alu_op = ADD;
                 o_offset = offset_jp;
             end
+            NOP_OP: begin
+                o_is_write = '0;
+                o_is_load = '0;
+                o_is_store = '0;
+                o_is_cmp = 'x;
+                o_cmp_op = NOP;
+                o_alu_op = OR;
+                o_offset = 'x;
+            end
             default: begin
                 // not recognized -> do nothing
                 o_is_write = '0;
                 o_is_load = '0;
                 o_is_store = '0;
-                o_is_cmp = '0;
+                o_is_cmp = 'x;
                 o_cmp_op = NOP;
                 o_alu_op = OR;
                 o_offset = 'x;
@@ -199,7 +211,9 @@ module opd_32_tb;
     opd_32 #(
         .NUM_REG(NUM_REG)
     ) dut (
-        .i_instruction(instruction),   
+        .i_instruction(instruction),
+        .i_nop(1'b0),
+
         .o_select_a(select_a),
         .o_select_b(select_b),
         .o_select_c(select_c),
