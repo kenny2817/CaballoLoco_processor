@@ -2,7 +2,7 @@ IFLAGS = -g2012 -Wall
 MODULES_DIR = modules
 PKG_DIR = pkgs
 PKGS = $(PKG_DIR)/alu_pkg.sv $(PKG_DIR)/cmp_pkg.sv $(PKG_DIR)/opcodes_pkg.sv
-TARGETS = mux demux cmp register alu register_bank pci opd_32 cbs register_mono register_bank_mono cbl haz fwd pipes
+TARGETS = mux demux cmp reg_multi alu reg_bank pci opd_32 cbs reg_mono reg_bank_mono cbl haz fwd pipes
 
 define IVERILOG_COMPILE
 	@iverilog $(IFLAGS) -s $@_tb -o $@ $^ || (echo "failed - $@"; exit 1)
@@ -13,40 +13,40 @@ endef
 
 icarus: $(TARGETS)
 
-mux: $(MODULES_DIR)/mux.sv
+mux: $(MODULES_DIR)/multiplexer.sv
 	${IVERILOG_COMPILE}
 
-demux: $(MODULES_DIR)/demux.sv
+demux: $(MODULES_DIR)/demultiplexer.sv
 	${IVERILOG_COMPILE}
 
-register: $(MODULES_DIR)/register.sv
+reg_multi: $(MODULES_DIR)/register_multiple.sv
 	${IVERILOG_COMPILE}
 
-register_bank: $(MODULES_DIR)/register_bank.sv
+reg_bank: $(MODULES_DIR)/register_bank.sv
 	${IVERILOG_COMPILE}
 
-register_bank_mono: $(MODULES_DIR)/register_bank_mono.sv
+reg_bank_mono: $(MODULES_DIR)/register_bank_mono.sv
 	${IVERILOG_COMPILE}
 
-cmp: $(PKG_DIR)/cmp_pkg.sv $(MODULES_DIR)/cmp.sv
+cmp: $(PKG_DIR)/cmp_pkg.sv $(MODULES_DIR)/comparator.sv
 	${IVERILOG_COMPILE}
 
-alu: $(PKG_DIR)/alu_pkg.sv $(MODULES_DIR)/alu.sv
+alu: $(PKG_DIR)/alu_pkg.sv $(MODULES_DIR)/arithmetic_logic_unit.sv
 	${IVERILOG_COMPILE}
 
-pci: $(MODULES_DIR)/pci.sv
+pci: $(MODULES_DIR)/program_counter_incrementer.sv
 	${IVERILOG_COMPILE}
 
-opd_32: ${PKGS}  $(MODULES_DIR)/opd_32.sv
+opd_32: ${PKGS}  $(MODULES_DIR)/opcode_decoder_32.sv
 	${IVERILOG_COMPILE}
 
-cbs: ${PKGS} $(MODULES_DIR)/cbs.sv $(MODULES_DIR)/register.sv $(MODULES_DIR)/register_mono.sv $(MODULES_DIR)/pci.sv $(MODULES_DIR)/mux.sv $(MODULES_DIR)/opd_32.sv $(MODULES_DIR)/register_bank.sv $(MODULES_DIR)/register_bank_mono.sv $(MODULES_DIR)/alu.sv $(MODULES_DIR)/cmp.sv
+cbs: ${PKGS} $(MODULES_DIR)/caballosano_single_cycle.sv $(MODULES_DIR)/register_mono.sv $(MODULES_DIR)/program_counter_incrementer.sv $(MODULES_DIR)/opcode_decoder_32.sv $(MODULES_DIR)/register_bank.sv $(MODULES_DIR)/register_bank_mono.sv $(MODULES_DIR)/arithmetic_logic_unit.sv $(MODULES_DIR)/comparator.sv
 	${IVERILOG_COMPILE}
 
-cbl: ${PKGS} $(MODULES_DIR)/cbl.sv $(MODULES_DIR)/forwarding.sv $(MODULES_DIR)/pipes.sv $(MODULES_DIR)/hazard.sv $(MODULES_DIR)/register.sv $(MODULES_DIR)/register_mono.sv $(MODULES_DIR)/pci.sv $(MODULES_DIR)/mux.sv $(MODULES_DIR)/opd_32.sv $(MODULES_DIR)/register_bank.sv $(MODULES_DIR)/register_bank_mono.sv $(MODULES_DIR)/alu.sv $(MODULES_DIR)/cmp.sv
+cbl: ${PKGS} $(MODULES_DIR)/caballoloco_pipelined.sv $(MODULES_DIR)/forwarding.sv $(MODULES_DIR)/pipes.sv $(MODULES_DIR)/hazard.sv $(MODULES_DIR)/register_mono.sv $(MODULES_DIR)/multiplexer.sv $(MODULES_DIR)/opcode_decoder_32.sv $(MODULES_DIR)/register_bank.sv $(MODULES_DIR)/register_bank_mono.sv $(MODULES_DIR)/arithmetic_logic_unit.sv $(MODULES_DIR)/comparator.sv
 	${IVERILOG_COMPILE}
 
-register_mono: $(MODULES_DIR)/register_mono.sv
+reg_mono: $(MODULES_DIR)/register_mono.sv
 	${IVERILOG_COMPILE}
 
 haz: ${PKGS}  $(MODULES_DIR)/hazard.sv

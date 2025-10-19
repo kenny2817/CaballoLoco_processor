@@ -1,4 +1,4 @@
-module register_mono # (
+module reg_mono # (
     parameter DATA_WIDTH
 ) (
     input logic clk,
@@ -22,7 +22,7 @@ module register_mono # (
 
 endmodule
 
-module register_mono_tb;
+module reg_mono_tb;
 
     localparam DATA_WIDTH = 8;
 
@@ -30,7 +30,7 @@ module register_mono_tb;
     logic [DATA_WIDTH - 1 : 0] write_data;
     wire [DATA_WIDTH - 1 : 0] read_data;
 
-    register_mono #( 
+    reg_mono #( 
         .DATA_WIDTH(DATA_WIDTH)
     ) dut (
         .clk(clk),

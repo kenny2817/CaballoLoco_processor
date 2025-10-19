@@ -25,7 +25,7 @@ module cbs #(
     cmp_op_e cmp_op;
 
     // PROGRAM COUNTER
-    register_mono #(
+    reg_mono #(
         .DATA_WIDTH(INSTR_SELECT)
     ) PC (
         .clk(clk),
@@ -46,7 +46,7 @@ module cbs #(
     );
 
     // INSTRUCTIONS
-    register_bank_mono #( 
+    reg_bank_mono #( 
         .DATA_WIDTH(REG_WIDTH),
         .NUM_REG(NUM_INSTR)
     ) INSTRUCTIONS (
@@ -79,7 +79,7 @@ module cbs #(
     );
 
     // REGISTERS
-    register_bank #(
+    reg_bank #(
         .DATA_WIDTH(REG_WIDTH),
         .NUM_REG(NUM_REG)
     ) REGISTERS (
@@ -112,7 +112,7 @@ module cbs #(
     );
 
     // MEMORY
-    register_bank_mono #(
+    reg_bank_mono #(
         .DATA_WIDTH(REG_WIDTH),
         .NUM_REG(NUM_MEM)
     ) MEM (

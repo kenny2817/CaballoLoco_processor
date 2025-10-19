@@ -1,4 +1,4 @@
-module register_bank # (
+module reg_bank # (
     parameter DATA_WIDTH,
     parameter NUM_REG,
     localparam SELECT_WIDTH = $clog2(NUM_REG)
@@ -32,7 +32,7 @@ module register_bank # (
 endmodule
 
 
-module register_bank_tb;
+module reg_bank_tb;
 
     localparam DATA_WIDTH = 8;
     localparam NUM_REG = 6;
@@ -43,7 +43,7 @@ module register_bank_tb;
     logic [DATA_WIDTH - 1 : 0] write_data;
     wire [DATA_WIDTH - 1 : 0] read_data [NUM_REG];
 
-    register_bank #( 
+    reg_bank #( 
         .DATA_WIDTH(DATA_WIDTH),
         .NUM_REG(NUM_REG)
     ) dut (

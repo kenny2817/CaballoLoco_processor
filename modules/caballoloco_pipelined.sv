@@ -55,7 +55,7 @@ module cbl #(
     logic       forward_a_A, forward_b_A, select_forward_a_A, select_forward_b_A;
 
 // PROGRAM COUNTER
-    register_mono #(
+    reg_mono #(
         .DATA_WIDTH(INSTR_SELECT)
     ) PC (
         .clk(clk),
@@ -68,7 +68,7 @@ module cbl #(
  assign new_pc = cmp_data_D ? (pc_D + offset_D[INSTR_SELECT -1 : 0]) : (pc_F + 1);
 
     // INSTRUCTIONS
-    register_bank_mono #( 
+    reg_bank_mono #( 
         .DATA_WIDTH(REG_WIDTH),
         .NUM_REG(NUM_INSTR)
     ) INSTRUCTIONS (
@@ -117,7 +117,7 @@ module cbl #(
     );
 
     // REGISTERS
-    register_bank #(
+    reg_bank #(
         .DATA_WIDTH(REG_WIDTH),
         .NUM_REG(NUM_REG)
     ) REGISTERS (
@@ -224,7 +224,7 @@ module cbl #(
     );
 
     // MEMORY
-    register_bank_mono #(
+    reg_bank_mono #(
         .DATA_WIDTH(REG_WIDTH),
         .NUM_REG(NUM_MEM)
     ) MEM (

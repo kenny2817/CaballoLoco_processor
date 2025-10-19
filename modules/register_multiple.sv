@@ -1,4 +1,4 @@
-module register # (
+module reg_multi # (
     parameter DATA_WIDTH,
     parameter NUM_REG
 ) (
@@ -30,7 +30,7 @@ module register # (
 
 endmodule
 
-module register_tb;
+module reg_multi_tb;
 
     localparam DATA_WIDTH = 8;
     localparam NUM_REG = 6;
@@ -39,7 +39,7 @@ module register_tb;
     logic [DATA_WIDTH - 1 : 0] write_data [NUM_REG];
     wire [DATA_WIDTH - 1 : 0] read_data [NUM_REG];
 
-    register #( 
+    reg_multi #( 
         .DATA_WIDTH(DATA_WIDTH),
         .NUM_REG(NUM_REG)
     ) dut (
