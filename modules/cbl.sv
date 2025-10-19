@@ -368,6 +368,10 @@ module cbl_tb;
         #135;
         $finish;
     end
+    initial begin
+        $dumpfile("cbl.vcd");
+        $dumpvars(0, cbl_tb);
+    end
 
     initial $monitor(
         "t:%3t | regs:%3d %3d %3d %3d %3d | mem:%3d %3d %3d %3d %3d | pc:%2d %2d | ist:%b | alu:%4d %4d : %4d | ld:%b %b %b %b | st:%b %b %b | nop:%b | f0:%b %b %b %b | f1:%b %b %b %b | %2d %2d |", 

@@ -19,8 +19,8 @@ Everything not strictly necessary.
 
 - [x] comparator - cmp
 - [x] opcode decoder -
-- [ ] exeption handler -
-- [ ] main logic - cbl (CaBalloLoco) pipelined + cache?
+- [x] exeption handler -
+- [x] main logic - cbl (CaBalloLoco) pipelined + cache?
 - [x] main logic - cbs (CaBalloSano) single-cycle
 
 ### OPCODES

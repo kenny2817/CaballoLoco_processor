@@ -62,4 +62,4 @@ S: ${PKGS}  $(MODULES_DIR)/S.sv
 	${IVERILOG_COMPILE}
 
 clean:
-	rm -f $(TARGETS)
+	rm -f $(TARGETS) *.vcd
