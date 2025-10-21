@@ -1,61 +1,62 @@
-# CaballoLoco_processor
+# CaballoLoco Processor
 
 The fastest processor whenever Will Smith is in the backstage.
 
 This repository contains the System Verilog code for the CaballoLoco processor. The project is organized into several modules, each with its corresponding testbench. The objective of this project is to optimize the processor more and more to understand every optimization step.
 
-objectives:
+## Objectives
 
-- [DONE] single cycle processor - CaBalloSano
-- [DONE] pipelined processor - CaBalloLoco
-- [ ] cache
-- [ ] TLB
-- [ ] memory
-- [ ] memory arbiter
-- [ ] speculation
-- [ ] multiple issue
+- [x] **Single Cycle Processor:** CaBalloSano
+- [x] **Pipelined Processor:** CaBalloLoco
+- [ ] **Cache:** Implement a cache memory.
+- [ ] **TLB:** Implement a Translation Lookaside Buffer.
+- [ ] **Memory:** Implement a memory module.
+- [ ] **Memory Arbiter:** Implement a memory arbiter.
+- [ ] **Speculation:** Implement branch and memory speculation.
+- [ ] **Multiple Issue:** Implement multiple issue.
 
 ## Folder Structure
 
-- `modules/`: This directory contains the source files for all the individual modules of the processor combined with the testbenches.
-- `pkgs/`: This directory contains the source files for all the packages used in the project.
-- `docs/`: This directory contains documentation related to the project, such as design specifications, architectural diagrams, or any other relevant information. Here you will find shemas of the various implementations.
+- `modules/`: Contains the source files for all the individual modules of the processor combined with the testbenches.
+- `pkgs/`: Contains the source files for all the packages used in the project.
+- `docs/`: Contains documentation related to the project, such as design specifications, architectural diagrams, or any other relevant information. Here you will find schemas of the various implementations.
 
 ## Contents
 
 ### Modules
 
-- [Arithmetic Logic Unit](modules/alu.sv)
-- [Program Counter Incrementer](modules/pc_incrementer.sv)
-- [Demultiplexer](modules/demux.sv)
-- [Multiplexer](modules/mux.sv)
-- [Register](modules/register.sv)
-- [Register Bank](modules/register_bank.sv)
+- [Arithmetic Logic Unit](modules/arithmetic_logic_unit.sv)
 - [Comparator](modules/comparator.sv)
-- [Opcode Decoder](modules/opcode_decoder.sv)
-- [Exception Unit](./modules/exception_unit.sv)
-- [Forward Unit](modules/forward_unit.sv)
-- [Main Logic - single cycle (CaBalloSano)](modules/caballosano_single_cycle.sv)
-- [Main Logic - pipelined (CaBalloLoco)](modules/caballoloco_pipelined.sv)
+- [Demultiplexer](modules/demultiplexer.sv)
+- [Forwarding Unit](modules/forwarding.sv)
+- [Hazard Unit](modules/hazard.sv)
+- [Multiplexer](modules/multiplexer.sv)
+- [Opcode Decoder](modules/opcode_decoder_32.sv)
+- [Pipes](modules/pipes.sv)
+- [Program Counter Incrementer](modules/program_counter_incrementer.sv)
+- [Register](modules/register_multiple.sv)
+- [Register Bank](modules/register_bank.sv)
+- [Main Logic - Single Cycle (CaBalloSano)](modules/caballosano_single_cycle.sv)
+- [Main Logic - Pipelined (CaBalloLoco)](modules/caballoloco_pipelined.sv)
 
 ### Packages
 
-- Arithmetic logic unit operands
-- Comparator operand
-- CPU operands - opcodes
+- [ALU Package](pkgs/alu_pkg.sv)
+- [Comparator Package](pkgs/cmp_pkg.sv)
+- [Opcodes Package](pkgs/opcodes_pkg.sv)
 
 ## TODO
 
-- [ ] shift left - shl
-- [ ] shift right - shr
-- [ ] cache
-- [ ] TLB
-- [ ] memory
+- [ ] **Shift Left (shl):** Implement the shift left operation.
+- [ ] **Shift Right (shr):** Implement the shift right operation.
+- [ ] **Cache:** Implement the cache memory.
+- [ ] **TLB:** Implement the Translation Lookaside Buffer.
+- [ ] **Memory:** Implement the main memory.
 
-## Future work
+## Future Work
 
-- [ ] speculation branch
-- [ ] speculation memory
-- [ ] multi-level cache
-- [ ] multiple issue
-- [ ] memory arbiter
+- [ ] **Branch Speculation:** Implement branch speculation to improve performance.
+- [ ] **Memory Speculation:** Implement memory speculation.
+- [ ] **Multi-level Cache:** Implement a multi-level cache hierarchy.
+- [ ] **Multiple Issue:** Implement a multiple issue pipeline.
+- [ ] **Memory Arbiter:** Implement a memory arbiter for managing memory access.
