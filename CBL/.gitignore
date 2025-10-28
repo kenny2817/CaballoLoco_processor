@@ -1,0 +1,12 @@
+reg_mono
+reg_bank
+cmp
+alu
+reg_bank_mono
+opd_32
+fwd
+haz
+pipes
+cbl
+
+*.vcd

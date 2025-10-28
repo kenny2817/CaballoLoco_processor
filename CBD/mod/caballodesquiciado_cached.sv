@@ -3,11 +3,10 @@ import cmp_pkg::*;
 import alu_pkg::*;
 import opcodes_pkg::*;
 
-module cbl #(
-    parameter NUM_REG,
-    parameter REG_WIDTH,
+module cbd #(
+    parameter NUM_REG, REG_WIDTH,
     parameter NUM_INSTR,
-    parameter NUM_MEM
+    parameter TLB_LINES, CACHE_LINES, STB_LINES, N_CACHE_SECTORS, LINE_WIDTH
 ) (
     input logic clk,
     input logic rst
@@ -20,7 +19,8 @@ module cbl #(
 
     localparam REG_SELECT = $clog2(NUM_REG);
     localparam INSTR_SELECT = $clog2(NUM_INSTR);
-    localparam MEM_SELECT = $clog2(NUM_MEM);
+    localparam INDEX_WIDTH = $clog2(N_CACHE_SECTORS);
+    localparam OFFSET_WIDTH = $clog2(LINE_WIDTH);
 
 // CABLE MANAGEMENT ======================================================
     // Register select paths
@@ -53,6 +53,13 @@ module cbl #(
     logic       nop;
     logic       forward_a_D, forward_b_D, select_forward_a_D, select_forward_b_D;
     logic       forward_a_A, forward_b_A, select_forward_a_A, select_forward_b_A;
+
+    // Exceptions
+    logic       e_itlb_D, e_itlb_A, e_itlb_M, e_itlb_W;
+    logic       e_illegal_instruction_D, e_illegal_instruction_A, e_illegal_instruction_M, e_illegal_instruction_W;
+    logic       e_zero_division_D, e_zero_division_A, e_zero_division_M, e_zero_division_W;
+    logic       e_dtlb_W;
+
 
 // PROGRAM COUNTER
     reg_mono #(
@@ -92,9 +99,11 @@ module cbl #(
 
         .i_instruction(instruction_F),
         .i_pc(pc_F),
+        .i_exception_itlb(NO),
 
         .o_instruction(instruction_D),
-        .o_pc(pc_D)
+        .o_pc(pc_D),
+        .o_exception_itlb(e_itlb_D)
     );
 
     // OPCODE DECODER
@@ -169,6 +178,8 @@ module cbl #(
         .i_is_load(is_load_D),
         .i_is_store(is_store_D),
         .i_alu_op(alu_op_D),
+        .i_exception_itlb(e_itlb_D),
+        .i_exception_illegal_instruction(NO),
 
         .o_reg_a(reg_a_A),
         .o_reg_b(reg_b_A),
@@ -179,7 +190,9 @@ module cbl #(
         .o_is_write(is_write_A),
         .o_is_load(is_load_A),
         .o_is_store(is_store_A),
-        .o_alu_op(alu_op_A)
+        .o_alu_op(alu_op_A),
+        .o_exception_itlb(e_itlb_A),
+        .o_exception_illegal_instruction(e_illegal_instruction_A)
     );
 
     // MUX reg_a-FORWARDING-PC
@@ -214,27 +227,110 @@ module cbl #(
         .i_is_write(is_write_A),
         .i_is_load(is_load_A),
         .i_is_store(is_store_A),
+        .i_exception_itlb(e_itlb_A),
+        .i_exception_illegal_instruction(e_illegal_instruction_A),
+        .i_exception_zero_division(NO),
 
         .o_reg_b(reg_b_M),
         .o_alu_data(alu_data_M),
         .o_reg_c_select(reg_c_select_M),
         .o_is_write(is_write_M),
         .o_is_load(is_load_M),
-        .o_is_store(is_store_M)
+        .o_is_store(is_store_M),
+        .o_exception_itlb(e_itlb_M),
+        .o_exception_illegal_instruction(e_illegal_instruction_M),
+        .o_exception_zero_division(e_zero_division_M),
     );
 
     // MEMORY
-    reg_bank_mono #(
-        .DATA_WIDTH(REG_WIDTH),
-        .NUM_REG(NUM_MEM)
-    ) MEM (
+
+    logic hit_tlb;
+    logic e_tlb;
+    logic [REG_WIDTH -1 : 0] addr_tlb;
+
+    tlb #(
+        .N_LINES(TLB_LINES),
+        .VA_WIDTH(REG_WIDTH),
+        .PA_WIDTH(REG_WIDTH)
+    ) TLB (
         .clk(clk),
         .rst(rst),
-        .i_write_enable(is_store_M),
-        .i_select(alu_data_M[MEM_SELECT -1 : 0]),
-        .i_write_data(reg_b_M),
-        .o_read_data(mem_data_M)
+
+        .i_virtual_addr(alu_data_M),
+
+        .i_write_enable(NO),
+        .i_write__virtual_ddr('x),
+        .i_write_physical_addr('x),
+
+        .o_hit(hit_tlb),
+        .o_exeption(e_tlb),
+        .o_physical_addr(addr_tlb)
     );
+
+    logic valid_commit;
+    logic [REG_WIDTH -1 : 0] data_commit;
+    logic [REG_WIDTH -1 : 0] addr_commit;
+    logic [REG_WIDTH -1 : 0] read_stb;
+    logic hit_stb;
+    logic e_stb;
+
+    logic hit_cache;
+    logic e_cache;
+    logic [REG_WIDTH -1 : 0] read_cache;
+
+
+    logic [REG_WIDTH -1 : 0] addr_cache;
+    logic store_cache;
+    assign addr_cache = is_load_M ? addr_tlb : addr_commit;
+    assign store_cache = valid_commit & ~is_load_M;
+
+    cache #(
+        .N_LINES(CACHE_LINES),
+        .N_SECTORS(N_CACHE_SECTORS),
+        .LINE_WIDTH(LINE_WIDTH),
+        .REG_WIDTH(REG_WIDTH),
+        .PA_WIDTH(REG_WIDTH),
+        .TAG_WIDTH(REG_WIDTH - INDEX_WIDTH - OFFSET_WIDTH),
+        .INDEX_WIDTH(INDEX_WIDTH),
+        .OFFSET_WIDTH(OFFSET_WIDTH)
+    ) CACHE (
+        .clk(clk),
+        .rst(rst),
+
+        .i_is_store(store_cache),
+        .i_write_data(data_commit),
+        .i_addr(addr_cache),
+
+        .o_hit(hit_cache),
+        .o_exeption(e_cache),
+        .o_read_data(read_cache)
+    );
+
+    logic hit_W = '0;
+    stb #(
+        .VA_WIDTH(REG_WIDTH),
+        .N_LINES(STB_LINES)
+    ) STB (
+        .clk(clk),
+        .rst(rst),
+
+        .i_adress(addr_tlb),
+        .i_write_data(reg_b_M),
+        .i_is_store(is_store_M),
+        .i_was_load(is_load_W),
+        .i_was_hit_cache(hit_W),
+
+        .o_hit(hit_stb),
+        .o_exeption(e_stb),
+        .o_read_data(read_stb),
+
+        .o_valid_commit(valid_commit),
+        .o_data_commit(data_commit),
+        .o_addr_commit(addr_commit)
+    );
+
+
+    assign mem_data_M = hit_stb ? read_stb : read_cache;
 
 // PIPE_W ===============================================================
     pipe_W #(
@@ -250,12 +346,20 @@ module cbl #(
         .i_reg_c_select(reg_c_select_M),
         .i_is_write(is_write_M),
         .i_is_load(is_load_M),
+        .i_exception_itlb(e_itlb_M),
+        .i_exception_illegal_instruction(e_illegal_instruction_M),
+        .i_exception_zero_division(e_zero_division_M),
+        .i_exception_dtlb(NO),
 
         .o_mem_data(mem_data_W),
         .o_alu_data(alu_data_W),
         .o_reg_c_select(reg_c_select_W),
         .o_is_write(is_write_W),
-        .o_is_load(is_load_W)
+        .o_is_load(is_load_W),
+        .o_exception_itlb(e_itlb_W),
+        .o_exception_illegal_instruction(e_illegal_instruction_W),
+        .o_exception_zero_division(e_zero_division_W),
+        .o_exception_dtlb(e_dtlb_W)
     );
 
     // MUX ALU-MEM
@@ -317,13 +421,17 @@ module cbl #(
 
 endmodule
 
-module cbl_tb;
+module cbd_tb;
 
     // Parameters
     localparam NUM_REG = 10;
     localparam REG_WIDTH = 32;
     localparam NUM_INSTR = 11;
-    localparam NUM_MEM = 5;
+    localparam TLB_LINES = 4;
+    localparam CACHE_LINES = 2;
+    localparam STB_LINES = 4;
+    localparam N_CACHE_SECTORS = CACHE_LINES;
+    localparam LINE_WIDTH = 2; 
 
     // Local parameters
     localparam REG_SELECT = $clog2(NUM_REG);
@@ -338,11 +446,15 @@ module cbl_tb;
     logic rst;
 
     // DUT
-    cbl #(
+    cbd #(
         .NUM_REG(NUM_REG),
         .REG_WIDTH(REG_WIDTH),
         .NUM_INSTR(NUM_INSTR),
-        .NUM_MEM(NUM_MEM)
+        .TLB_LINES(TLB_LINES),
+        .CACHE_LINES(CACHE_LINES),
+        .STB_LINES(STB_LINES),
+        .N_CACHE_SECTORS(N_CACHE_SECTORS),
+        .LINE_WIDTH(LINE_WIDTH)
     ) dut (
         .clk(clk),
         .rst(rst)
@@ -355,7 +467,24 @@ module cbl_tb;
     initial begin
         $monitoroff;
         rst = 1; #1; rst = 0; #1;
-        dut.MEM.data[0] = 1; dut.MEM.data[1] = 2; 
+        dut.TLB.virtual_addrs[0] = 0; dut.TLB.physical_addrs[0] = 0; dut.TLB.valid_bit[0] = 1;
+        dut.TLB.virtual_addrs[1] = 1; dut.TLB.physical_addrs[1] = 2; dut.TLB.valid_bit[1] = 1;
+        dut.CACHE.cache_tags[0][0] = 0; dut.CACHE.cache_valid_bit[0][0] = 1; dut.CACHE.cache_mem[0][0][0] = 1; dut.CACHE.cache_mem[0][0][1] = 3;
+        dut.CACHE.cache_tags[1][0] = 0; dut.CACHE.cache_valid_bit[1][0] = 1; dut.CACHE.cache_mem[1][0][0] = 2; dut.CACHE.cache_mem[1][0][1] = 4;
+
+        for (int i = 0; i < TLB_LINES; i++) begin
+            $display("TLB Line %0d: V:%0h P:%0h Vb:%b", i, dut.TLB.virtual_addrs[i], dut.TLB.physical_addrs[i], dut.TLB.valid_bit[i]);
+        end
+        for (int i = 0; i < N_CACHE_SECTORS; i++) begin
+            for (int j = 0; j < CACHE_LINES / N_CACHE_SECTORS; j++) begin
+                $display(
+                    "CACHE Sector %0d Line %0d: Tag:%0h Vb:%b Data[0]:%0h [1]:%0h", 
+                    i, j, dut.CACHE.cache_tags[i][j], dut.CACHE.cache_valid_bit[i][j], 
+                    dut.CACHE.cache_mem[i][j][0], dut.CACHE.cache_mem[i][j][1]
+                );
+            end
+        end
+
         dut.INSTRUCTIONS.data[0] = {LW_OP,  REG_0, REG_0, REG_4, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         dut.INSTRUCTIONS.data[1] = {LW_OP,  REG_0, REG_0, REG_0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         dut.INSTRUCTIONS.data[2] = {LW_OP,  REG_0, REG_0, REG_1, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
@@ -370,19 +499,18 @@ module cbl_tb;
     end
     initial begin
         $dumpfile("cbl.vcd");
-        $dumpvars(0, cbl_tb);
+        $dumpvars(0, dut);
     end
 
     initial $monitor(
-        "t:%3t | regs:%3d %3d %3d %3d %3d | mem:%3d %3d %3d %3d %3d | pc:%2d %2d | ist:%b | alu:%4d %4d : %4d | ld:%b %b %b %b | st:%b %b %b | nop:%b | f0:%b %b %b %b | f1:%b %b %b %b | %2d %2d |", 
+        "t:%3t | regs:%3d %3d %3d %3d %3d | hit:%b %b %b | e:%b %b %b | addr:%h %h - %b| c:%h - %h %h %h - %h | pc:%2d %2d | ist:%b | alu:%4d %4d : %4d | nop:%b |", 
         $time, dut.REGISTERS.data[0], dut.REGISTERS.data[1], dut.REGISTERS.data[2], dut.REGISTERS.data[3], dut.REGISTERS.data[4], 
-        dut.MEM.data[0], dut.MEM.data[1], dut.MEM.data[2], dut.MEM.data[3], dut.MEM.data[4], dut.pc_F, dut.pc_D, dut.instruction_D, 
-        dut.a, dut.b, dut.alu_data_A, 
-        dut.is_load_D, dut.is_load_A, dut.is_load_M, dut.is_load_W, 
-        dut.is_store_D, dut.is_store_A, dut.is_store_M,
+        dut.hit_tlb, dut.hit_cache, dut.hit_stb, dut.e_tlb, dut.e_cache, dut.e_stb, 
+        dut.addr_tlb, dut.addr_commit, dut.is_load_M,
+        dut.CACHE.i_addr, dut.CACHE.addr_tag, dut.CACHE.addr_idx, dut.CACHE.addr_off, dut.read_cache,
+        dut.pc_F, dut.pc_D, dut.instruction_D, 
+        dut.a, dut.b, dut.alu_data_A,
         dut.nop, 
-        dut.forward_a_D, dut.select_forward_a_D, dut.forward_b_D, dut.select_forward_b_D,
-        dut.forward_a_A, dut.select_forward_a_A, dut.forward_b_A, dut.select_forward_b_A, dut.alu_data_A, dut.new_reg
     );
 
 endmodule

@@ -10,19 +10,23 @@ module pipe_D #(
     input logic flush,
 
     input logic [INSTR_WIDTH -1 : 0] i_instruction,
+    input logic i_exception_itlb,
     input logic [PC_WIDTH -1 : 0] i_pc,
 
+    output logic [PC_WIDTH -1 : 0] o_pc,
     output logic [INSTR_WIDTH -1 : 0] o_instruction,
-    output logic [PC_WIDTH -1 : 0] o_pc
+    output logic o_exception_itlb
 );
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             o_pc <= '0;
             o_instruction <= '0;
+            o_exception_itlb <= 1'b0;
         end else if (enable) begin
             o_pc <= i_pc;
             o_instruction <= i_instruction;
+            o_exception_itlb <= i_exception_itlb;
         end else if (flush) begin
             o_instruction <= '0;
         end
@@ -47,6 +51,8 @@ module pipe_A #(
     input logic i_is_load,
     input logic i_is_store,
     input alu_op_e i_alu_op,
+    input logic i_exception_itlb,
+    input logic i_exception_illegal_instruction,
 
     output logic [REG_WIDTH -1 : 0] o_reg_a,
     output logic [REG_WIDTH -1 : 0] o_reg_b,
@@ -57,7 +63,9 @@ module pipe_A #(
     output logic o_is_write,
     output logic o_is_load,
     output logic o_is_store,
-    output alu_op_e o_alu_op
+    output alu_op_e o_alu_op,
+    output logic o_exception_itlb,
+    output logic o_exception_illegal_instruction
 );
 
     always_ff @(posedge clk or posedge rst) begin
@@ -72,6 +80,8 @@ module pipe_A #(
             o_is_load <= 1'b0;
             o_is_store <= 1'b0;
             o_alu_op <= ADD;
+            o_exception_itlb <= 1'b0;
+            o_exception_illegal_instruction <= 1'b0;
         end else if (enable) begin
             o_reg_a <= i_reg_a;
             o_reg_b <= i_reg_b;
@@ -83,6 +93,8 @@ module pipe_A #(
             o_is_load <= i_is_load;
             o_is_store <= i_is_store;
             o_alu_op <= i_alu_op;
+            o_exception_itlb <= i_exception_itlb;
+            o_exception_illegal_instruction <= i_exception_illegal_instruction;
         end
     end
 endmodule
@@ -101,13 +113,19 @@ module pipe_M #(
     input logic i_is_write,
     input logic i_is_load,
     input logic i_is_store,
+    input logic i_exception_itlb,
+    input logic i_exception_illegal_instruction,
+    input logic i_exception_zero_division,
     
     output logic [REG_WIDTH -1 : 0] o_reg_b,
     output logic [REG_WIDTH -1 : 0] o_alu_data,
     output logic [REG_SELECT -1 : 0] o_reg_c_select,
     output logic o_is_write,
     output logic o_is_load,
-    output logic o_is_store
+    output logic o_is_store,
+    output logic o_exception_itlb,
+    output logic o_exception_illegal_instruction,
+    output logic o_exception_zero_division
 );
 
     always_ff @(posedge clk or posedge rst) begin
@@ -118,6 +136,9 @@ module pipe_M #(
             o_is_write <= 1'b0;
             o_is_load <= 1'b0;
             o_is_store <= 1'b0;
+            o_exception_itlb <= 1'b0;
+            o_exception_illegal_instruction <= 1'b0;
+            o_exception_zero_division <= 1'b0;
         end else if (enable) begin
             o_reg_b <= i_reg_b;
             o_alu_data <= i_alu_data;
@@ -125,6 +146,9 @@ module pipe_M #(
             o_is_write <= i_is_write;
             o_is_load <= i_is_load;
             o_is_store <= i_is_store;
+            o_exception_itlb <= i_exception_itlb;
+            o_exception_illegal_instruction <= i_exception_illegal_instruction;
+            o_exception_zero_division <= i_exception_zero_division;
         end
     end
 
@@ -143,12 +167,20 @@ module pipe_W #(
     input logic [REG_SELECT -1 : 0] i_reg_c_select,
     input logic i_is_write,
     input logic i_is_load,
+    input logic i_exception_itlb,
+    input logic i_exception_illegal_instruction,
+    input logic i_exception_zero_division,
+    input logic i_exception_dtlb,
     
     output logic [REG_WIDTH -1 : 0] o_mem_data,
     output logic [REG_WIDTH -1 : 0] o_alu_data,
     output logic [REG_SELECT -1 : 0] o_reg_c_select,
     output logic o_is_write,
-    output logic o_is_load
+    output logic o_is_load,
+    output logic o_exception_itlb,
+    output logic o_exception_illegal_instruction,
+    output logic o_exception_zero_division,
+    output logic o_exception_dtlb
 );
 
     always_ff @(posedge clk or posedge rst) begin
@@ -158,12 +190,20 @@ module pipe_W #(
             o_reg_c_select <= '0;
             o_is_write <= 1'b0;
             o_is_load <= 1'b0;
+            o_exception_itlb <= 1'b0;
+            o_exception_illegal_instruction <= 1'b0;
+            o_exception_zero_division <= 1'b0;
+            o_exception_dtlb <= 1'b0;
         end else if (enable) begin
             o_mem_data <= i_mem_data;
             o_alu_data <= i_alu_data;
             o_reg_c_select <= i_reg_c_select;
             o_is_write <= i_is_write;
             o_is_load <= i_is_load;
+            o_exception_itlb <= i_exception_itlb;
+            o_exception_illegal_instruction <= i_exception_illegal_instruction;
+            o_exception_zero_division <= i_exception_zero_division;
+            o_exception_dtlb <= i_exception_dtlb;
         end
     end
     
