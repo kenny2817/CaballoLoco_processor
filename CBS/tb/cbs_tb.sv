@@ -3,12 +3,11 @@ import cmp_pkg::*;
 import alu_pkg::*;
 import opcodes_pkg::*;
 
-
 module cbs_tb;
 
     localparam NUM_REG = 5;
     localparam REG_WIDTH = 32;
-    localparam NUM_INSTR = 10;
+    localparam NUM_INSTR = 16;
     localparam NUM_MEM = 5;
     localparam REG_SELECT = $clog2(NUM_REG);
     localparam MEM_SELECT = $clog2(NUM_MEM);
@@ -43,19 +42,19 @@ module cbs_tb;
         dut.INSTRUCTIONS.data[3] = {ADD_OP, REG_1, REG_0, REG_2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         dut.INSTRUCTIONS.data[4] = {SW_OP,  REG_2, REG_2, REG_0, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         dut.INSTRUCTIONS.data[5] = {BEQ_OP, REG_2, REG_2, REG_0, {{(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT -2){1'b0}}, 2'd1}};
-        dut.INSTRUCTIONS.data[8] = {ADD_OP, REG_1, REG_0, REG_2, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        dut.INSTRUCTIONS.data[6] = {ADD_OP, REG_0, REG_2, REG_3, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
+        dut.INSTRUCTIONS.data[9] = {ADD_OP, REG_1, REG_2, REG_3, {(REG_WIDTH - OPCODES_WIDTH - 3 * REG_SELECT){1'b0}}};
         $monitoron;
         #95;
         $finish;
     end
-
 
     initial begin
         $dumpfile("cbl.vcd");
         $dumpvars(0, cbs_tb);
     end
 
-    initial $monitor("t=%3t | pc= %2d | ist=%b | reg_a=%3d a=%3d | reg_b=%3d b=%3d | reg_c=%3d | write=%b | alu=%7d | regs=%3d %3d %3d %3d %3d | mem=%3d %3d %3d %3d %3d | new_reg=%3d | offset=%3d |", 
+    initial $monitor("t=%3t | pc= %2d | ist=%b | reg_a=%3d a=%3d | reg_b=%3d b=%3d | reg_c=%3d | write=%b | alu=%4d | regs=%3d %3d %3d %3d %3d | mem=%3d %3d %3d %3d %3d | new_reg=%3d | offset=%3d |", 
         $time, dut.pc,dut.instruction, dut.reg_a, dut.a, dut.reg_b, dut.b, dut.reg_c_select, dut.is_write, dut.alu_data,
         dut.REGISTERS.data[0], dut.REGISTERS.data[1], dut.REGISTERS.data[2], dut.REGISTERS.data[3], dut.REGISTERS.data[4], 
         dut.MEM.data[0], dut.MEM.data[1], dut.MEM.data[2], dut.MEM.data[3], dut.MEM.data[4],

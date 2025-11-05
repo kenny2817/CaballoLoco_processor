@@ -36,7 +36,7 @@ module cbs #(
     );
 
     // PROGRAM COUNTER INCREMENTER
-    assign new_pc = cmp_data ? (pc + alu_data[INSTR_SELECT -1 : 0]) : (pc +1);
+    assign new_pc = cmp_data ? alu_data[INSTR_SELECT -1 : 0] : (pc +1);
 
     // INSTRUCTIONS
     reg_bank_mono #( 

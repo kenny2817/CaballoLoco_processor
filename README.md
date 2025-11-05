@@ -17,9 +17,13 @@ This repository contains the System Verilog code for the CaballoLoco processor. 
 
 ## Folder Structure
 
-- `modules/`: Contains the source files for all the individual modules of the processor combined with the testbenches.
-- `pkgs/`: Contains the source files for all the packages used in the project.
-- `docs/`: Contains documentation related to the project, such as design specifications, architectural diagrams, or any other relevant information. Here you will find schemas of the various implementations.
+Each implementation has its own folder with the following structure:
+
+- `mod/`: Contains the source files for all the individual modules of the processor combined with the testbenches.
+- `pkg/`: Contains the source files for all the packages used in the project.
+- `tc/`: Contains the source files for all the testbenches.
+- `doc/`: Contains documentation related to the project, such as design specifications, architectural diagrams, or any other relevant information. Here you will find schemas of the various implementations.
+- `Makefile`: Icarus verilog Makefile.
 
 ## Contents
 
@@ -50,6 +54,7 @@ This repository contains the System Verilog code for the CaballoLoco processor. 
 - [ ] **Shift Left (shl):** Implement the shift left operation.
 - [ ] **Shift Right (shr):** Implement the shift right operation.
 - [ ] **Cache:** Implement the cache memory.
+- [ ] **Store Buffer:** Implement the store buffer.
 - [ ] **TLB:** Implement the Translation Lookaside Buffer.
 - [ ] **Memory:** Implement the main memory.
 
