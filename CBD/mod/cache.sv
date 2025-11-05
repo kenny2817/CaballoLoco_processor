@@ -87,7 +87,7 @@ module cache #(
         dirty_bit   [idx_registry[registry_slot]][rnd_registry[registry_slot]] <= 1'b0;
     endtask
 
-    task automatic put_mem(
+    task automatic request_mem(
         input int registry_slot
     );
         o_mem_enable <= 1'b1;
@@ -110,7 +110,7 @@ module cache #(
     assign addr_off = i_va_addr[OFFSET_WIDTH -1 : 0];
     assign mem_idx = (tag_registry[1] == i_mem_addr[PA_WIDTH -1 : OFFSET_WIDTH]);
     
-    always_comb begin : assignments_amd_hit_logic
+    always_comb begin : hit_logic
         // hit logic
         o_hit = 1'b0;
         hit_index = 'x;
@@ -164,8 +164,8 @@ module cache #(
                 end
             end
             state <= IDLE;
-            o_mem_enable = 1'b0;
-            o_mem_ack = 1'b0;
+            o_mem_enable <= 1'b0;
+            o_mem_ack <= 1'b0;
         end else begin
             state <= next_state;
             o_mem_ack <= 1'b0;
@@ -174,7 +174,7 @@ module cache #(
                 IDLE: begin
                     if (!o_hit) begin
                         // store or load miss
-                        put_mem(0);
+                        request_mem(0);
                     end else if (i_is_store) begin
                         store_hit();
                     end
@@ -182,7 +182,7 @@ module cache #(
                 S_IDLE: begin
                     if (!o_hit && i_is_load) begin
                         // load miss
-                        put_mem(1);
+                        request_mem(1);
                     end else if (o_hit && i_is_store) begin
                         store_hit();
                     end else if (dirty_bit[idx_registry[0]][rnd_registry[0]]) begin
