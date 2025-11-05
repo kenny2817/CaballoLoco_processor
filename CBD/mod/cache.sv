@@ -1,138 +1,219 @@
 
+typedef enum logic [1:0] { 
+    IDLE,                   // ready for store and load
+    S_IDLE,                 // wait mem miss, ready for load
+    L_BUSY,                 // stall, wait load miss
+    S_BUSY                  // stall, wait load miss, store in background
+} cache_state;
+
+
 module cache #(
-    parameter N_LINES,
-    parameter N_SECTORS,
-    parameter LINE_WIDTH,
-    parameter REG_WIDTH,
-    parameter PA_WIDTH,
-    parameter TAG_WIDTH,
-    parameter INDEX_WIDTH,
-    parameter OFFSET_WIDTH
+    parameter N_SECTORS,                                    // number of sectors
+    parameter N_LINES,                                      // number of lines per sector
+    parameter N_ELEMENTS,                                   // number of elements per line
+    parameter N_BYTES,                                      // number of bytes per element
+    parameter VA_WIDTH,                                     // virtual address width
+    parameter PA_WIDTH,                                     // physical address width (this should be already the tag!)
+    
+    localparam ELEMENT_WIDTH = N_BYTES * 8,                 // element width in bits
+    localparam LINE_WIDTH    = N_ELEMENTS * ELEMENT_WIDTH,  // line width in bits
+    localparam INDEX_WIDTH   = $clog2(N_LINES)              // index width in bits
 ) (
-    input logic clk,
-    input logic rst,
+    input logic                             clk,
+    input logic                             rst,
+    input logic [INDEX_WIDTH -1 : 0]        rnd,
 
-    input logic i_is_store,
-    input logic [PA_WIDTH -1 : 0] i_addr,
-    input logic [REG_WIDTH -1 : 0] i_write_data, 
+    input logic                             i_is_load,
+    input logic                             i_is_store,
+    input logic [VA_WIDTH -1 : 0]           i_va_addr,
+    input logic [PA_WIDTH -1 : 0]           i_pa_addr,
+    input logic [ELEMENT_WIDTH -1 : 0]      i_write_data, 
 
-    output logic o_hit,
-    output logic o_exeption,
-    output logic [REG_WIDTH -1 : 0] o_read_data
+    output logic                            o_hit,
+    output logic                            o_stall,
+    output logic [ELEMENT_WIDTH -1 : 0]     o_read_data,
+
+    // mem  
+    output logic                            o_mem_enable,
+    output logic                            o_mem_type,
+    output logic                            o_mem_ack,
+    output logic [PA_WIDTH -1 : 0]          o_mem_addr,
+    output logic [LINE_WIDTH -1 : 0]        o_mem_data,
+
+    input logic                             i_mem_enable,
+    input logic [LINE_WIDTH -1 : 0]         i_mem_data,
+    input logic [PA_WIDTH -1 : 0]           i_mem_addr
 );
-    localparam N_L_SECTOR = N_LINES /N_SECTORS;
-    localparam LINE_SELECT_WIDTH = $clog2(N_L_SECTOR);
+    localparam SECTOR_WIDTH = $clog2(N_SECTORS);
+    localparam OFFSET_WIDTH = $clog2(N_ELEMENTS);
 
-    logic [REG_WIDTH -1 : 0] cache_mem [N_SECTORS][N_L_SECTOR][LINE_WIDTH];
-    logic [TAG_WIDTH -1 : 0] cache_tags [N_SECTORS][N_L_SECTOR];
-    logic cache_valid_bit [N_SECTORS][N_L_SECTOR];
+    logic [LINE_WIDTH -1 : 0]               memory          [N_SECTORS][N_LINES];
+    logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   tag             [N_SECTORS][N_LINES];
+    logic                                   valid_bit       [N_SECTORS][N_LINES];
+    logic                                   dirty_bit       [N_SECTORS][N_LINES];
 
-    logic [TAG_WIDTH -1 : 0] addr_tag;
-    logic [INDEX_WIDTH -1 : 0] addr_idx;
-    logic [OFFSET_WIDTH -1 : 0] addr_off;
+    logic [SECTOR_WIDTH -1 : 0]             idx_registry    [2];
+    logic [INDEX_WIDTH -1 : 0]              rnd_registry    [2];
+    logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   tag_registry    [2];
+    logic                                   mem_idx;
 
-    logic [LINE_SELECT_WIDTH -1 : 0] hit_index;
 
-    assign addr_tag = i_addr[PA_WIDTH -1 : OFFSET_WIDTH + INDEX_WIDTH];
-    assign addr_idx = i_addr[OFFSET_WIDTH + INDEX_WIDTH -1 : OFFSET_WIDTH];
-    assign addr_off = i_addr[OFFSET_WIDTH -1 : 0];
+    logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   addr_tag;
+    logic [SECTOR_WIDTH -1 : 0]             addr_idx;
+    logic [OFFSET_WIDTH -1 : 0]             addr_off;
+    logic [INDEX_WIDTH -1 : 0]              hit_index;
 
-    always_comb begin
+    cache_state                             state;
+    cache_state                             next_state;
+
+    // tasks
+    task automatic evict(
+        input int registry_slot
+    );
+        o_mem_enable <= 1'b1;
+        o_mem_type <= 1'b1;  // Write
+        o_mem_addr <= {tag[idx_registry[registry_slot]][rnd_registry[registry_slot]], {OFFSET_WIDTH{1'b0}}};
+        o_mem_data <= memory[idx_registry[registry_slot]][rnd_registry[registry_slot]];
+        dirty_bit[idx_registry[registry_slot]][rnd_registry[registry_slot]] <= 1'b0;
+    endtask
+
+    task automatic load_from_mem(
+        input int registry_slot
+    );
+        o_mem_ack <= 1'b1;
+        tag         [idx_registry[registry_slot]][rnd_registry[registry_slot]] <= i_mem_addr[PA_WIDTH -1 : OFFSET_WIDTH];
+        memory      [idx_registry[registry_slot]][rnd_registry[registry_slot]] <= i_mem_data;
+        valid_bit   [idx_registry[registry_slot]][rnd_registry[registry_slot]] <= 1'b1;
+        dirty_bit   [idx_registry[registry_slot]][rnd_registry[registry_slot]] <= 1'b0;
+    endtask
+
+    task automatic put_mem(
+        input int registry_slot
+    );
+        o_mem_enable <= 1'b1;
+        o_mem_type <= 1'b0;
+        o_mem_addr <= {addr_tag, {(OFFSET_WIDTH){1'b0}}};
+        tag_registry[registry_slot] <= addr_tag;
+        idx_registry[registry_slot] <= addr_idx;
+        rnd_registry[registry_slot] <= rnd;
+    endtask
+
+    task automatic store_hit(  
+    );
+        memory[addr_idx][hit_index][(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH] <= i_write_data;
+        dirty_bit[addr_idx][hit_index] <= 1'b1;
+    endtask
+
+    // assignments
+    assign addr_tag = i_pa_addr[PA_WIDTH -1 : OFFSET_WIDTH];
+    assign addr_idx = i_va_addr[SECTOR_WIDTH + OFFSET_WIDTH -1 : OFFSET_WIDTH];
+    assign addr_off = i_va_addr[OFFSET_WIDTH -1 : 0];
+    assign mem_idx = (tag_registry[1] == i_mem_addr[PA_WIDTH -1 : OFFSET_WIDTH]);
+    
+    always_comb begin : assignments_amd_hit_logic
+        // hit logic
         o_hit = 1'b0;
-        o_exeption = 1'b1;
-        o_read_data = 'x;
         hit_index = 'x;
-
-        for (int i = 0; i < N_L_SECTOR; i++) begin
-            if (cache_valid_bit[addr_idx][i] && (cache_tags[addr_idx][i] == addr_tag)) begin
+        for (int i = 0; i < N_LINES; i++) begin
+            if (valid_bit[addr_idx][i] && (tag[addr_idx][i] == addr_tag)) begin
                 o_hit = 1'b1;
-                o_exeption = 1'b0;
-                o_read_data = cache_mem[addr_idx][i][addr_off];
                 hit_index = i;
             end
         end
-    end
 
-    always_ff @(posedge clk or posedge rst) begin
-        if (rst) begin
-            for (int i = 0; i < N_SECTORS; i++) begin
-                for (int j = 0; j < N_L_SECTOR; j++) begin
-                    cache_valid_bit[i][j] <= 1'b0;
+        // output logic
+        o_read_data = memory[addr_idx][hit_index][(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH];
+        o_stall = (i_is_load && !o_hit);
+    end
+    always_comb begin : state_machine
+        next_state = state;
+        case (state)
+            IDLE: begin
+                if (!o_hit && i_is_load) begin
+                    next_state = L_BUSY;
+                end else if (!o_hit && i_is_store) begin
+                    next_state = S_IDLE;
                 end
             end
-        end else begin
-            if (i_is_store && o_hit) begin
-                cache_mem[addr_idx][hit_index][addr_off] <= i_write_data;
+            S_IDLE: begin
+                if (o_hit && i_is_store) begin
+                    next_state = IDLE;
+                end else if (!o_hit && i_is_load) begin
+                    next_state = S_BUSY;
+                end
             end
+            L_BUSY: begin
+                if (o_hit && i_is_load) begin
+                    next_state = IDLE;
+                end
+            end
+            S_BUSY: begin
+                if (o_hit && i_is_load) begin
+                    next_state = S_IDLE;
+                end
+            end
+        endcase
+    end
+
+    always_ff @( posedge clk or posedge rst) begin : control_flow
+        if (rst) begin
+            for (int i = 0; i < N_SECTORS; i++) begin
+                for (int j = 0; j < N_LINES; j++) begin
+                    valid_bit[i][j] <= 1'b0;
+                    dirty_bit[i][j] <= 1'b0;
+                end
+            end
+            state <= IDLE;
+            o_mem_enable = 1'b0;
+            o_mem_ack = 1'b0;
+        end else begin
+            state <= next_state;
+            o_mem_ack <= 1'b0;
+            o_mem_enable <= 1'b0;
+            case (state)
+                IDLE: begin
+                    if (!o_hit) begin
+                        // store or load miss
+                        put_mem(0);
+                    end else if (i_is_store) begin
+                        store_hit();
+                    end
+                end
+                S_IDLE: begin
+                    if (!o_hit && i_is_load) begin
+                        // load miss
+                        put_mem(1);
+                    end else if (o_hit && i_is_store) begin
+                        store_hit();
+                    end else if (dirty_bit[idx_registry[0]][rnd_registry[0]]) begin
+                        // eviction - buffer accepts write in 1 cycle
+                        evict(0);
+                    end else if (i_mem_enable) begin
+                        load_from_mem(0);
+                    end
+                end
+                L_BUSY: begin
+                    if (dirty_bit[idx_registry[0]][rnd_registry[0]]) begin
+                        // eviction - buffer accepts write in 1 cycle
+                        evict(0);
+                    end else if (i_mem_enable) begin
+                        load_from_mem(0);
+                    end
+                end
+                S_BUSY: begin
+                    if (dirty_bit[idx_registry[1]][rnd_registry[1]]) begin
+                        // eviction - buffer accepts write in 1 cycle
+                        evict(1);
+                    end else if (dirty_bit[idx_registry[0]][rnd_registry[0]]) begin
+                        // eviction - buffer accepts write in 1 cycle
+                        evict(0);
+                    end else if (i_mem_enable) begin
+                        load_from_mem(mem_idx);
+                    end
+                end
+            endcase
         end
     end
 
 endmodule
 
-
-module cache_tb;
-
-    // Parameters
-    localparam REG_WIDTH = 32;
-    localparam PA_WIDTH = 8;
-    localparam N_LINES = 16;
-    localparam N_SECTORS = 4;
-    localparam LINE_WIDTH = 4; // Bytes per line
-    localparam OFFSET_WIDTH = $clog2(LINE_WIDTH);
-    localparam INDEX_WIDTH = $clog2(N_SECTORS);
-    localparam TAG_WIDTH = PA_WIDTH - INDEX_WIDTH - OFFSET_WIDTH;
-
-    // Testbench signals
-    logic clk = 0;
-    logic rst;
-    logic i_is_store;
-    logic [PA_WIDTH-1:0] i_addr;
-    logic [REG_WIDTH-1:0] i_write_data;
-    logic o_hit;
-    logic o_exeption;
-    logic [REG_WIDTH-1:0] o_read_data;
-
-    // Instantiate the cache module
-    cache # (
-        .N_LINES(N_LINES),
-        .N_SECTORS(N_SECTORS),
-        .LINE_WIDTH(LINE_WIDTH),
-        .REG_WIDTH(REG_WIDTH),
-        .PA_WIDTH(PA_WIDTH),
-        .TAG_WIDTH(TAG_WIDTH),
-        .INDEX_WIDTH(INDEX_WIDTH),
-        .OFFSET_WIDTH(OFFSET_WIDTH)
-    ) dut (
-        .clk(clk),
-        .rst(rst),
-        .i_is_store(i_is_store),
-        .i_addr(i_addr),
-        .i_write_data(i_write_data),
-        .o_hit(o_hit),
-        .o_exeption(o_exeption),
-        .o_read_data(o_read_data)
-    );
-
-    // Clock generation
-    always #5 clk = ~clk;
-
-    // Test sequence
-    initial begin
-        rst = 1; i_is_store = 0; i_addr = 0; i_write_data = 0; #10;
-        rst = 0; #10;
-        dut.cache_tags[0][0] = 4'hA; dut.cache_valid_bit[0][0] = 1'b1; dut.cache_mem[0][0][0] = 8'hFF;
-        i_is_store = 1; i_addr = 8'h00; i_write_data = 32'hDEADBEEF; #10;
-        i_is_store = 0; i_addr = 8'ha0; #10;
-        i_is_store = 0; i_addr = 8'h10; #10;
-        i_is_store = 1; i_addr = 8'h04; i_write_data = 32'hCAFEBABE;#10;
-        i_is_store = 0; i_addr = 8'h04; #10;
-        $finish;
-    end
-
-    initial $monitor(
-        "t: %3t | is_store: %b | addr: %h | write_data: %h | hit: %b | excep: %b | read_data: %h | %h |",
-        $time, i_is_store, i_addr, i_write_data, o_hit, o_exeption, o_read_data, dut.cache_tags[0][0], dut.cache_mem[0][0][0]
-    );
-
-
-endmodule
