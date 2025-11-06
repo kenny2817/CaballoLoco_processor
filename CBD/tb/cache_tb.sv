@@ -15,7 +15,7 @@ module cache_tb;
     // Testbench signals
     logic clk = 0, rst;
     logic [INDEX_WIDTH -1 : 0] rnd;
-    logic is_load, is_store;
+    logic enable, is_load;
     logic [VA_WIDTH -1 : 0] va_addr;
     logic [PA_WIDTH -1 : 0] pa_addr;
     logic [ELEMENT_WIDTH -1 : 0] write_data;
@@ -42,8 +42,9 @@ module cache_tb;
         .rst(rst),
         .rnd(rnd),
 
+        .i_enable(enable),
         .i_is_load(is_load),
-        .i_is_store(is_store),
+
         .i_va_addr(va_addr),
         .i_pa_addr(pa_addr),
         .i_write_data(write_data),
@@ -80,7 +81,7 @@ module cache_tb;
     // Test sequence
     initial begin
         $monitoroff;
-        rst = 1; is_load = 0; is_store = 0; va_addr = 0; pa_addr = 0; write_data = 0; rnd = $random; mem_enable_in = 0; mem_data_in = 0; #10;
+        rst = 1; enable = 0; va_addr = 0; pa_addr = 0; write_data = 0; rnd = $random; mem_enable_in = 0; mem_data_in = 0; #10;
         rst = 0; #10;
 
         // Initialize a cache line directly for testing hit logic
@@ -90,46 +91,42 @@ module cache_tb;
         printing();
         $monitoron;
 
-        is_load = 1;    va_addr = 8'h01; pa_addr = 8'h0F; #10; // Load hit
-        is_load = 1;    va_addr = 8'h00; pa_addr = 8'h0F; #10; // Load hit
+        enable = 1; is_load = 1; va_addr = 8'h01; pa_addr = 8'h0F; #10; // Load hit
+        enable = 1; is_load = 1; va_addr = 8'h00; pa_addr = 8'h0F; #10; // Load hit
 
-        is_load = 1;    va_addr = 8'h03; pa_addr = 8'h05; #30; // Load miss
+        enable = 1; is_load = 1; va_addr = 8'h03; pa_addr = 8'h05; #30; // Load miss
         mem_enable_in = 1; mem_data_in = {32'hCCCCCCCC, 32'hDDDDDDDD}; mem_addr_in = 8'h05; #10; // Write to memory
         if (mem_ack) mem_enable_in = 0; #10;
-        if (hit) is_load = 0; #10;
+        if (hit) enable = 0; #10;
         printing();
 
-        is_store = 1;   va_addr = 8'h00; pa_addr = 8'h0F; write_data = 32'h11111111; #10; // Store hit
-        if (hit) is_store = 0; #10;
+        enable = 1; is_load = 0; va_addr = 8'h00; pa_addr = 8'h0F; write_data = 32'h11111111; #10; // Store hit
+        if (hit) enable = 0; #10;
         printing();
 
-        is_load = 1;    va_addr = 8'h01; pa_addr = 8'hA0; #30; // Load miss (different sector/tag)
+        enable = 1; is_load = 1; va_addr = 8'h01; pa_addr = 8'hA0; #30; // Load miss (different sector/tag)
         mem_enable_in = 1; mem_data_in = {32'h22222222, 32'h33333333}; mem_addr_in = 8'hA0; #10; // Write to memory
         if (mem_ack) mem_enable_in = 0; #10;
-        if (hit) is_load = 0; #10;
+        if (hit) enable = 0; #10;
         printing();
         
-        is_store = 1;   va_addr = 8'h00; pa_addr = 8'hA4; write_data = 32'h55555555;#10; // Store miss
-        is_store = 0; #20;
-        is_load = 1;    va_addr = 8'h03; pa_addr = 8'hB0; #20; // Load miss
+        enable = 1; is_load = 0; va_addr = 8'h00; pa_addr = 8'hA4; write_data = 32'h55555555;#30; // Store miss
+                    is_load = 1; va_addr = 8'h03; pa_addr = 8'hB0; #20; // Load miss
         mem_enable_in = 1; mem_data_in = {32'h44444444, 32'h44444444}; mem_addr_in = 8'hA4; #10; // Write to memory
         if (mem_ack) mem_enable_in = 0; #10;
         mem_enable_in = 1; mem_data_in = {32'h44444444, 32'h44444444}; mem_addr_in = 8'hB0; #10; // Write to memory
         if (mem_ack) mem_enable_in = 0; #10;
         if (hit) begin
             is_load = 0;
-            is_store = 1;
         end #10;
+        if (hit) enable = 0; #10;
         printing();
-        #30;
-        printing();
-        #10;
         $finish;
     end
 
     initial $monitor(
-        "t: %3t | s:%1d | is_load: %b | is_store: %b | va_addr: %h | pa_addr: %h | hit: %b | stall: %b | read_data: %h | mem_enable: %b | mem_type: %b | mem_ack: %b | mem_addr: %h | mem_data: %h |",
-        $time, dut.state, is_load, is_store, va_addr, pa_addr, hit, stall, read_data, mem_enable_out, mem_type, mem_ack, mem_addr_out, mem_data_out
+        "t: %3t | s:%1d | enable: %b | is_load: %b | va_addr: %h | pa_addr: %h | hit: %b | stall: %b | read_data: %h || mem_enable: %b | mem_type: %b | mem_ack: %b | mem_addr: %h | mem_data: %h |",
+        $time, dut.state, enable, is_load, va_addr, pa_addr, hit, stall, read_data, mem_enable_out, mem_type, mem_ack, mem_addr_out, mem_data_out
     );
 
 

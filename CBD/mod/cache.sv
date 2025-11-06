@@ -23,8 +23,9 @@ module cache #(
     input logic                             rst,
     input logic [INDEX_WIDTH -1 : 0]        rnd,
 
+    input logic                             i_hit, // store buffer bypass
+    input logic                             i_enable,
     input logic                             i_is_load,
-    input logic                             i_is_store,
     input logic [VA_WIDTH -1 : 0]           i_va_addr,
     input logic [PA_WIDTH -1 : 0]           i_pa_addr,
     input logic [ELEMENT_WIDTH -1 : 0]      i_write_data, 
@@ -123,36 +124,40 @@ module cache #(
 
         // output logic
         o_read_data = memory[addr_idx][hit_index][(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH];
-        o_stall = (i_is_load && !o_hit);
+        o_stall = (i_enable && i_is_load && !o_hit);
     end
     always_comb begin : state_machine
-        next_state = state;
-        case (state)
-            IDLE: begin
-                if (!o_hit && i_is_load) begin
-                    next_state = L_BUSY;
-                end else if (!o_hit && i_is_store) begin
-                    next_state = S_IDLE;
+        if (i_enable) begin
+            next_state = state;
+            case (state)
+                IDLE: begin
+                    if (!o_hit) begin
+                        if (i_is_load) begin
+                            next_state = L_BUSY;
+                        end else begin
+                            next_state = S_IDLE;
+                        end
+                    end
                 end
-            end
-            S_IDLE: begin
-                if (o_hit && i_is_store) begin
-                    next_state = IDLE;
-                end else if (!o_hit && i_is_load) begin
-                    next_state = S_BUSY;
+                S_IDLE: begin
+                    if (o_hit && !i_is_load) begin
+                        next_state = IDLE;
+                    end else if (!o_hit && i_is_load) begin
+                        next_state = S_BUSY;
+                    end
                 end
-            end
-            L_BUSY: begin
-                if (o_hit && i_is_load) begin
-                    next_state = IDLE;
+                L_BUSY: begin
+                    if (o_hit && i_is_load) begin
+                        next_state = IDLE;
+                    end
                 end
-            end
-            S_BUSY: begin
-                if (o_hit && i_is_load) begin
-                    next_state = S_IDLE;
+                S_BUSY: begin
+                    if (o_hit && i_is_load) begin
+                        next_state = S_IDLE;
+                    end
                 end
-            end
-        endcase
+            endcase
+        end
     end
 
     always_ff @( posedge clk or posedge rst) begin : control_flow
@@ -166,24 +171,25 @@ module cache #(
             state <= IDLE;
             o_mem_enable <= 1'b0;
             o_mem_ack <= 1'b0;
-        end else begin
+        end else if (i_enable) begin
             state <= next_state;
             o_mem_ack <= 1'b0;
             o_mem_enable <= 1'b0;
             case (state)
                 IDLE: begin
-                    if (!o_hit) begin
+                    if (!i_is_load && !o_hit || !o_hit && !i_hit) begin
                         // store or load miss
                         request_mem(0);
-                    end else if (i_is_store) begin
+                    end
+                    if (!i_is_load && o_hit) begin
                         store_hit();
                     end
                 end
                 S_IDLE: begin
-                    if (!o_hit && i_is_load) begin
+                    if (i_is_load && !o_hit && !i_hit) begin
                         // load miss
                         request_mem(1);
-                    end else if (o_hit && i_is_store) begin
+                    end else if (!i_is_load && o_hit) begin
                         store_hit();
                     end else if (dirty_bit[idx_registry[0]][rnd_registry[0]]) begin
                         // eviction - buffer accepts write in 1 cycle
@@ -212,6 +218,9 @@ module cache #(
                     end
                 end
             endcase
+        end else begin
+            o_mem_enable <= 1'b0;
+            o_mem_ack <= 1'b0;
         end
     end
 
