@@ -7,11 +7,9 @@ module tlb #(
     input logic clk,
     input logic rst,
 
-    input logic i_write_enable,
-    input logic [VA_WIDTH -1 : 0] i_write_virtual_addr,
-    input logic [PA_WIDTH -1 : 0] i_write_physical_addr,
-
+    input logic i_enable,
     input logic [VA_WIDTH -1 : 0] i_virtual_addr,
+    input logic [PA_WIDTH -1 : 0] i_physical_addr,
 
     output logic [PA_WIDTH -1 : 0] o_physical_addr,
     output logic o_exeption
@@ -46,9 +44,9 @@ module tlb #(
                 valid_bit[i] <= '0;
             end
             oldest_line <= '0;
-        end else if (i_write_enable) begin
-            virtual_addrs[oldest_line] <= i_write_virtual_addr;
-            physical_addrs[oldest_line] <= i_write_physical_addr;
+        end else if (i_enable) begin
+            virtual_addrs[oldest_line] <= i_virtual_addr;
+            physical_addrs[oldest_line] <= i_physical_addr;
             valid_bit[oldest_line] <= 1'b1;
             oldest_line <= oldest_line + 1'b1;
         end
