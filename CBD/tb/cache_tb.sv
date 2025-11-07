@@ -15,7 +15,7 @@ module cache_tb;
     // Testbench signals
     logic clk = 0, rst;
     logic [INDEX_WIDTH -1 : 0] rnd;
-    logic enable, is_load;
+    logic stb_hit, enable, is_load;
     logic [VA_WIDTH -1 : 0] va_addr;
     logic [PA_WIDTH -1 : 0] pa_addr;
     logic [ELEMENT_WIDTH -1 : 0] write_data;
@@ -42,6 +42,7 @@ module cache_tb;
         .rst(rst),
         .rnd(rnd),
 
+        .i_hit(stb_hit),
         .i_enable(enable),
         .i_is_load(is_load),
 
@@ -81,7 +82,7 @@ module cache_tb;
     // Test sequence
     initial begin
         $monitoroff;
-        rst = 1; enable = 0; va_addr = 0; pa_addr = 0; write_data = 0; rnd = $random; mem_enable_in = 0; mem_data_in = 0; #10;
+        rst = 1; enable = 0; va_addr = 0; pa_addr = 0; write_data = 0; rnd = $random; mem_enable_in = 0; mem_data_in = 0; stb_hit = 0; #10;
         rst = 0; #10;
 
         // Initialize a cache line directly for testing hit logic
