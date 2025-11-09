@@ -1,132 +1,243 @@
 
+typedef enum logic [1:0] { 
+    IDLE,                   // ready for store and load
+    S_REQUEST,                 // wait mem miss, ready for load
+    L_REQUEST,                 // stall, wait load miss
+    BOTH_REQUEST                  // stall, wait load miss, store in background
+} cache_state;
+
+
 module dca #(
-    parameter TLB_LINES,
-    parameter CACHE_SECTORS,
-    parameter CACHE_LINES,
-    parameter CACHE_ELEMENTS,
-    parameter STB_LINES,
-    parameter REG_WIDTH, 
-    parameter VA_WIDTH, 
-    parameter PA_WIDTH,
-    localparam INDEX_WIDTH   = $clog2(CACHE_LINES)
+    parameter N_SECTORS,                                    // number of sectors
+    parameter N_LINES,                                      // number of lines per sector
+    parameter N_ELEMENTS,                                   // number of elements per line
+    parameter N_BYTES,                                      // number of bytes per element
+    parameter VA_WIDTH,                                     // virtual address width
+    parameter PA_WIDTH,                                     // physical address width (this should be already the tag!)
+    parameter ID_WIDTH,                                     // id width for memory requests
+    
+    localparam ELEMENT_WIDTH = N_BYTES * 8,                 // element width in bits
+    localparam LINE_WIDTH    = N_ELEMENTS * ELEMENT_WIDTH,  // line width in bits
+    localparam INDEX_WIDTH   = $clog2(N_LINES)              // index width in bits
 ) (
-    input logic                         clk,
-    input logic                         rst,
-    input logic [INDEX_WIDTH -1 : 0]    rnd,
+    input logic                             clk,
+    input logic                             rst,
+    input logic [INDEX_WIDTH -1 : 0]        rnd,
 
-    input logic                         i_is_load,
-    input logic                         i_is_store,
-    input logic [VA_WIDTH -1 : 0]       i_virtual_addr,
-    input logic [REG_WIDTH -1 : 0]      i_write_data,
+    input logic                             i_hit, // store buffer bypass
+    input logic                             i_enable,
+    input logic                             i_is_load,
+    input logic [VA_WIDTH -1 : 0]           i_va_load,
+    input logic [PA_WIDTH -1 : 0]           i_pa_load,
+    input logic [VA_WIDTH -1 : 0]           i_va_store,
+    input logic [PA_WIDTH -1 : 0]           i_pa_store,
+    input logic [ELEMENT_WIDTH -1 : 0]      i_data_store, 
 
-    output logic                        o_data_loaded,
-    output logic                        o_exeption,
-    output logic                        o_stall
+    output logic                            o_hit,
+    output logic                            o_stall,
+    output logic [ELEMENT_WIDTH -1 : 0]     o_read_data,
+
+    // mem  
+    output logic                            o_mem_enable,
+    output logic [PA_WIDTH -1 : 0]          o_mem_addr,
+    output logic [LINE_WIDTH -1 : 0]        o_mem_data,
+    output logic                            o_mem_type,
+    output logic                            o_mem_ack,
+
+    input logic                             i_mem_enable,
+    input logic [LINE_WIDTH -1 : 0]         i_mem_data,
+    input logic [ID_WIDTH -1 : 0]           i_mem_id_request,
+    input logic [ID_WIDTH -1 : 0]           i_mem_id_response
 );
 
-    localparam CACHE_BYTES = REG_WIDTH / 8;
+    localparam SECTOR_WIDTH = $clog2(N_SECTORS);
+    localparam OFFSET_WIDTH = $clog2(N_ELEMENTS);
 
-    // tlb
-    logic [PA_WIDTH -1 : 0]             tlb_pa_addr;
+    logic [LINE_WIDTH -1 : 0]               memory          [N_SECTORS][N_LINES];
+    logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   tag             [N_SECTORS][N_LINES];
+    logic                                   valid_bit       [N_SECTORS][N_LINES];
+    logic                                   dirty_bit       [N_SECTORS][N_LINES];
 
-    // stb
-    logic                               stb_valid_commit;
-    logic [REG_WIDTH -1 : 0]            stb_data_commit;
-    logic [VA_WIDTH -1 : 0]             stb_addr_commit;
-    logic                               stb_stall;
-    logic                               stb_hit;
-    logic [REG_WIDTH -1 : 0]            stb_data;
+    logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   addr_tag;
+    logic [SECTOR_WIDTH -1 : 0]             addr_idx;
+    logic [OFFSET_WIDTH -1 : 0]             addr_off;
+    logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   addr_tag_load;
+    logic [SECTOR_WIDTH -1 : 0]             addr_idx_load;
+    logic [OFFSET_WIDTH -1 : 0]             addr_off_load;
+    logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   addr_tag_store;
+    logic [SECTOR_WIDTH -1 : 0]             addr_idx_store;
+    logic [OFFSET_WIDTH -1 : 0]             addr_off_store;
+    logic [INDEX_WIDTH -1 : 0]              hit_index;
 
-    // cache
-    logic                               cache_hit;
-    logic                               cache_stall;
-    logic [REG_WIDTH -1 : 0]            cache_data;
 
-    // logic
-    logic                               enable;
-    logic [VA_WIDTH -1 : 0]             virtual_addr;
+    logic [INDEX_WIDTH -1 : 0]              rnd_registry[2];
+    logic [ID_WIDTH -1 : 0]                 ids_registry[2];
+    logic                                   mem_hit     [2];
 
-    assign o_data_loaded = stb_hit ? stb_data : cache_data;
-    assign o_stall = stb_stall || cache_stall;
-    assign enable = o_exeption && (i_is_load || stb_valid_commit);
-    assign virtual_addr = i_is_load ? i_virtual_addr : stb_addr_commit;
+    cache_state                             state;
+    cache_state                             next_state;
 
-    tlb #(
-        .N_LINES(TLB_LINES),
-        .VA_WIDTH(VA_WIDTH),
-        .PA_WIDTH(PA_WIDTH)
-    ) TLB (
-        .clk(clk),
-        .rst(rst),
-
-        .i_write_enable(),
-        .i_write_virtual_addr(),
-        .i_write_physical_addr(),
-
-        .i_virtual_addr(virtual_addr),
-
-        .o_physical_addr(tlb_pa_addr),
-        .o_exeption(o_exeption)
+    // tasks
+    task automatic request_mem(
+        input int slot
     );
+        o_mem_enable <= 1'b1;
+        o_mem_type <= 1'b0;
+        o_mem_addr <= {addr_tag, {(OFFSET_WIDTH){1'b0}}};
+        rnd_registry[slot] <= rnd;
+        ids_registry[slot] <= i_mem_id_request;
+    endtask
 
-    stb #(
-        .VA_WIDTH(VA_WIDTH),
-        .N_LINES(STB_LINES)
-    ) STB (
-        .clk(clk),
-        .rst(rst),
-        
-        .i_is_store(i_is_store),
-        .i_adress(i_virtual_addr),
-        .i_write_data(i_write_data),
-
-        .i_load_cache(i_is_load),
-        .i_hit_cache(cache_hit),
-
-        .o_valid_commit(stb_valid_commit),
-        .o_data_commit(stb_data_commit),
-        .o_addr_commit(stb_addr_commit),
-
-        .o_stall(stb_stall),
-
-        .o_hit(stb_hit),
-        .o_read_data(stb_data)
+    task automatic get_from_mem(
+        input int slot,
+        input logic [SECTOR_WIDTH -1 : 0] idx,
+        input logic [PA_WIDTH -OFFSET_WIDTH -1 : 0] tmp_tag
     );
+        if (mem_hit[slot]) begin
+            // load from mem
+            o_mem_ack <= 1'b1;
+            tag         [idx][rnd_registry[slot]] <= tmp_tag;
+            memory      [idx][rnd_registry[slot]] <= i_mem_data;
+            valid_bit   [idx][rnd_registry[slot]] <= 1'b1;
+            dirty_bit   [idx][rnd_registry[slot]] <= 1'b0;
+        end
+    endtask
 
-    cache #(
-        .N_SECTORS(CACHE_SECTORS),
-        .N_LINES(CACHE_LINES),
-        .N_ELEMENTS(CACHE_ELEMENTS),
-        .N_BYTES(CACHE_BYTES),
-        .VA_WIDTH(VA_WIDTH),
-        .PA_WIDTH(PA_WIDTH)
-    ) CACHE (
-        .clk(clk),
-        .rst(rst),
-        .rnd(rnd),
-        
-        .i_hit(stb_hit),
-        .i_enable(enable),
-        .i_is_load(i_is_load),
-        .i_va_addr(virtual_addr),
-        .i_pa_addr(tlb_pa_addr),
-        .i_write_data(stb_data_commit),
-
-        .o_hit(cache_hit),
-        .o_stall(cache_stall),
-        .o_read_data(cache_data),
-
-        .o_mem_enable(),
-        .o_mem_type(),
-        .o_mem_ack(),
-        .o_mem_addr(),
-        .o_mem_data(),
-
-        .i_mem_enable(),
-        .i_mem_data(),
-        .i_mem_addr()
-
+    task automatic evict_dirty_try_get_mem(
+        input int slot,
+        input logic [SECTOR_WIDTH -1 : 0] idx,
+        input logic [PA_WIDTH -OFFSET_WIDTH -1 : 0] tmp_tag
     );
+        if (dirty_bit[idx][rnd_registry[slot]]) begin
+            // eviction - buffer accepts write in 1 cycle
+            o_mem_enable <= 1'b1;
+            o_mem_type <= 1'b1;  // Write
+            o_mem_addr <= {tag[idx][rnd_registry[slot]], {OFFSET_WIDTH{1'b0}}};
+            o_mem_data <= memory[idx][rnd_registry[slot]];
+            dirty_bit[idx][rnd_registry[slot]] <= 1'b0;
+        end
+        get_from_mem(slot, idx, tmp_tag);
+    endtask
+
+    task automatic store_hit(  
+    );
+        memory[addr_idx_store][hit_index][(addr_off_store +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH] <= i_data_store;
+        dirty_bit[addr_idx_store][hit_index] <= 1'b1;
+    endtask
+
+    // assignments
+    assign addr_tag_load    = i_pa_load[PA_WIDTH -1 : OFFSET_WIDTH];
+    assign addr_idx_load    = i_va_load[SECTOR_WIDTH + OFFSET_WIDTH -1 : OFFSET_WIDTH];
+    assign addr_off_load    = i_va_load[OFFSET_WIDTH -1 : 0];
+    assign addr_tag_store   = i_pa_store[PA_WIDTH -1 : OFFSET_WIDTH];
+    assign addr_idx_store   = i_va_store[SECTOR_WIDTH + OFFSET_WIDTH -1 : OFFSET_WIDTH];
+    assign addr_off_store   = i_va_store[OFFSET_WIDTH -1 : 0];
+    assign addr_tag         = i_is_load ? addr_tag_load : addr_tag_store;
+    assign addr_idx         = i_is_load ? addr_idx_load : addr_idx_store;
+    assign addr_off         = i_is_load ? addr_off_load : addr_off_store;
+    
+    assign mem_hit[0]       = i_mem_enable && ids_registry[0] == i_mem_id_response;
+    assign mem_hit[1]       = i_mem_enable && ids_registry[1] == i_mem_id_response;
+
+
+    always_comb begin : hit_logic
+        // hit logic
+        o_hit = 1'b0;
+        hit_index = 'x;
+        for (int i = 0; i < N_LINES; i++) begin
+            if (valid_bit[addr_idx][i] && (tag[addr_idx][i] == addr_tag)) begin
+                o_hit = 1'b1;
+                hit_index = i;
+            end
+        end
+
+        // output logic
+        o_read_data = memory[addr_idx][hit_index][(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH];
+        o_stall = (i_enable && i_is_load && !o_hit);
+    end
+
+    always_comb begin : state_machine
+        if (i_enable) begin
+            next_state = state;
+            case (state)
+                IDLE: begin
+                    if (!o_hit) begin
+                        if (i_is_load) begin
+                            next_state = L_REQUEST;
+                        end else begin
+                            next_state = S_REQUEST;
+                        end
+                    end
+                end
+                S_REQUEST: begin
+                    if (o_hit && !i_is_load) begin
+                        next_state = IDLE;
+                    end else if (!o_hit && i_is_load) begin
+                        next_state = BOTH_REQUEST;
+                    end
+                end
+                L_REQUEST: begin
+                    if (o_hit && i_is_load) begin
+                        next_state = IDLE;
+                    end
+                end
+                BOTH_REQUEST: begin
+                    if (o_hit && i_is_load) begin
+                        next_state = S_REQUEST;
+                    end
+                end
+            endcase
+        end
+    end
+
+    always_ff @( posedge clk or posedge rst) begin : control_flow
+        if (rst) begin
+            for (int i = 0; i < N_SECTORS; i++) begin
+                for (int j = 0; j < N_LINES; j++) begin
+                    valid_bit[i][j] <= 1'b0;
+                    dirty_bit[i][j] <= 1'b0;
+                end
+            end
+            state <= IDLE;
+            o_mem_enable <= 1'b0;
+            o_mem_ack <= 1'b0;
+        end else begin
+            o_mem_ack <= 1'b0;
+            o_mem_enable <= 1'b0;
+            o_mem_data <= 'x;
+            if (i_enable) begin
+                state <= next_state;
+                case (state)
+                    IDLE: begin
+                        if (!i_is_load && !o_hit || !o_hit && !i_hit) begin
+                            // store or load miss
+                            request_mem(0);
+                        end
+                        if (!i_is_load && o_hit) begin
+                            store_hit();
+                        end
+                    end
+                    S_REQUEST: begin
+                        if (i_is_load && !o_hit && !i_hit) begin
+                            // load miss
+                            request_mem(1);
+                        end else if (!i_is_load && o_hit) begin
+                            store_hit();
+                        end else begin
+                            evict_dirty_try_get_mem(0, addr_idx_store, addr_tag_store);
+                        end
+                    end
+                    L_REQUEST: begin
+                        evict_dirty_try_get_mem(0, addr_idx_load, addr_tag_load);
+                    end
+                    BOTH_REQUEST: begin
+                        evict_dirty_try_get_mem(1, addr_idx_load, addr_tag_load);
+                        get_from_mem(0, addr_idx_store, addr_tag_store);
+                    end
+                endcase
+            end
+        end
+    end
 
 endmodule
 

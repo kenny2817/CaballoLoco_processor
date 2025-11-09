@@ -2,5 +2,7 @@ cache
 dca
 stb
 tlb
+ica
+arb
 
 *.vcd
