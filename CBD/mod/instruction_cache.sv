@@ -66,7 +66,8 @@ module ica #(
     assign addr_idx     = i_va_addr[SECTOR_WIDTH + OFFSET_WIDTH -1 : OFFSET_WIDTH];
     assign addr_off     = i_va_addr[OFFSET_WIDTH -1 : 0];
 
-    assign o_stall      = i_enable && !hit && !mem_hit;
+    // assign o_stall      = i_enable && !hit && !mem_hit;
+    assign o_stall      = i_enable && !hit;
 
     //  memory request
     assign o_mem_enable = i_enable && (state == IDLE) && !hit;
