@@ -1,10 +1,10 @@
 module haz #(
     parameter REG_SELECT
 ) (
-    input logic i_is_cmp_D,
-    input logic i_is_write_A,
-    input logic i_is_load_D,
-    input logic i_is_load_A,
+    input logic                     i_is_cmp_D,
+    input logic                     i_is_write_A,
+    input logic                     i_is_load_D,
+    input logic                     i_is_load_A,
     input logic [REG_SELECT -1 : 0] i_reg_a_select_D,
     input logic [REG_SELECT -1 : 0] i_reg_b_select_D,
     input logic [REG_SELECT -1 : 0] i_reg_c_select_A,
