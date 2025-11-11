@@ -42,9 +42,9 @@ each of these has a dedicated folder
 | Main Logic                               | [mod](CBD/mod/caballodesquiciado_pipelined.sv) | [tb](CBD/tb/cbd_tb.sv) |
 | Arbiter                                  |           [mod](CBD/mod/arbiter.sv)            | [tb](CBD/tb/arb_tb.sv) |
 | Data Cache                               |          [mod](CBD/mod/data_cache.sv)          | [tb](CBD/tb/dca_tb.sv) |
-| Data Memory                              |         [mod](CBD/mod/data_memory.sv)          | [tb](CBD/tb/dme_tb.sv) |
+| Data Memory                              |         [mod](CBD/mod/data_memory.sv)          |           /            |
 | Instruction Cache                        |      [mod](CBD/mod/instruction_cache.sv)       | [tb](CBD/tb/ica_tb.sv) |
-| Instruction Memory                       |      [mod](CBD/mod/instruction_memory.sv)      | [tb](CBD/tb/ime_tb.sv) |
+| Instruction Memory                       |      [mod](CBD/mod/instruction_memory.sv)      |           /            |
 | Store Buffer                             |         [mod](CBD/mod/store_buffer.sv)         | [tb](CBD/tb/stb_tb.sv) |
 | Translation Lookaside Buffer             |             [mod](CBD/mod/tlb.sv)              | [tb](CBD/tb/tlb_tb.sv) |
 
