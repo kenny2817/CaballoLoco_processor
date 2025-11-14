@@ -39,7 +39,7 @@ each of these has a dedicated folder
 
 | Name <img width="200" height="1" alt=""> |                     Module                     |       Testbench        |
 | ---------------------------------------- | :--------------------------------------------: | :--------------------: |
-| Main Logic                               | [mod](CBD/mod/caballodesquiciado_pipelined.sv) | [tb](CBD/tb/cbd_tb.sv) |
+| Main Logic                               | [mod](CBD/mod/caballodesquiciado_pipelined.sv) |           /            |
 | Arbiter                                  |           [mod](CBD/mod/arbiter.sv)            | [tb](CBD/tb/arb_tb.sv) |
 | Data Cache                               |          [mod](CBD/mod/data_cache.sv)          | [tb](CBD/tb/dca_tb.sv) |
 | Data Memory                              |         [mod](CBD/mod/data_memory.sv)          |           /            |
