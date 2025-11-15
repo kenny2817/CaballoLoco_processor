@@ -1,4 +1,5 @@
 package alu_pkg;
+
     typedef enum logic [2 : 0] {
         OP_ADD,
         OP_SUB,

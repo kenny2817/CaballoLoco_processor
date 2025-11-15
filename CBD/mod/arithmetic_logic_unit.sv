@@ -5,7 +5,7 @@ module alu #(
     parameter REG_WIDTH = 32
 )(
     // control
-    input  alu_control_t i_control,
+    input  alu_control_t            i_control,
 
     // input
     input  logic [REG_WIDTH -1 : 0] i_rs1,
@@ -26,10 +26,10 @@ module alu #(
 
     // op1
     always_comb begin
-        case (control.op1_sel)
-            OP_REG:  alu_op1 = reg_rs1;
-            OP_IMM:  alu_op1 = imm;
-            OP_PC:   alu_op1 = pc;
+        case (i_control.op1_sel)
+            OP_REG:  alu_op1 = i_rs1;
+            OP_IMM:  alu_op1 = i_imm;
+            OP_PC:   alu_op1 = i_pc;
             OP_ZERO: alu_op1 = '0;
             default: alu_op1 = '0;
         endcase
@@ -37,10 +37,10 @@ module alu #(
 
     // op2
     always_comb begin
-        case (control.op2_sel)
-            OP_REG:  alu_op2 = reg_rs2;
-            OP_IMM:  alu_op2 = imm;
-            // OP_PC:   alu_op2 = pc;
+        case (i_control.op2_sel)
+            OP_REG:  alu_op2 = i_rs2;
+            OP_IMM:  alu_op2 = i_imm;
+            // OP_PC:   alu_op2 = i_pc;
             OP_ZERO: alu_op2 = '0;
             default: alu_op2 = '0;
         endcase
@@ -49,7 +49,7 @@ module alu #(
     always_comb begin
         // add-sub
         // A-B is implemented as A + (~B) + 1
-        logic op_is_sub = (control.operation == OP_SUB);
+        logic op_is_sub = (i_control.operation == OP_SUB);
         logic [REG_WIDTH-1:0] op2verted = op_is_sub ? ~alu_op2 : alu_op2;
         // REG_WIDTH +1 bit adder to capture the carry-out
         logic [REG_WIDTH:0] adder_result_ext = alu_op1 + op2verted + op_is_sub;
@@ -66,16 +66,16 @@ module alu #(
         logic [REG_WIDTH-1:0] sra_result = $signed(alu_op1) >>> shamt; 
 
         // result
-        case (control.operation)
-            OP_ADD:  result = adder_result;
-            OP_SUB:  result = adder_result;
-            OP_AND:  result = and_result;
-            OP_OR:   result = or_result;
-            OP_XOR:  result = xor_result;
-            OP_SLL:  result = sll_result;
-            OP_SRL:  result = srl_result;
-            OP_SRA:  result = sra_result;
-            default: result = '0;
+        case (i_control.operation)
+            OP_ADD:  o_result = adder_result;
+            OP_SUB:  o_result = adder_result;
+            OP_AND:  o_result = and_result;
+            OP_OR:   o_result = or_result;
+            OP_XOR:  o_result = xor_result;
+            OP_SLL:  o_result = sll_result;
+            OP_SRL:  o_result = srl_result;
+            OP_SRA:  o_result = sra_result;
+            default: o_result = '0;
         endcase
 
         // flags
@@ -100,7 +100,7 @@ module alu #(
 
         logic signed_less_than   = N ^ V; // True if (N=1, V=0) or (N=0, V=1)
         logic unsigned_less_than = ~C;    // True if C=0 (borrow occurred)
-        o_less_than = control.use_unsigned ? unsigned_less_than : signed_less_than;
+        o_less_than = i_control.use_unsigned ? unsigned_less_than : signed_less_than;
     end
 
 endmodule
