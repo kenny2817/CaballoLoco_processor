@@ -21,8 +21,28 @@ module alu #(
     output logic                    o_less_than
 );
 
+    // operands
     logic [REG_WIDTH-1:0] alu_op1;
     logic [REG_WIDTH-1:0] alu_op2;
+
+    // internal logic
+    logic [REG_WIDTH    : 0] adder_result_ext;
+    logic [REG_WIDTH -1 : 0] adder_result;
+    logic [REG_WIDTH -1 : 0] op2verted;
+    logic [REG_WIDTH -1 : 0] and_result;
+    logic [REG_WIDTH -1 : 0] or_result;
+    logic [REG_WIDTH -1 : 0] xor_result;
+    logic [REG_WIDTH -1 : 0] sll_result;
+    logic [REG_WIDTH -1 : 0] srl_result;
+    logic [REG_WIDTH -1 : 0] sra_result;
+    logic [4 : 0]            shamt;
+    logic                    op_is_sub;
+
+    // flags
+    logic N, C, V;
+    logic op1_sign, op2_sign;
+    logic add_overflow, sub_overflow;
+    logic signed_less_than, unsigned_less_than;
 
     // op1
     always_comb begin
@@ -49,21 +69,21 @@ module alu #(
     always_comb begin
         // add-sub
         // A-B is implemented as A + (~B) + 1
-        logic op_is_sub = (i_control.operation == OP_SUB);
-        logic [REG_WIDTH-1:0] op2verted = op_is_sub ? ~alu_op2 : alu_op2;
+        op_is_sub = (i_control.operation == OP_SUB);
+        op2verted = op_is_sub ? ~alu_op2 : alu_op2;
         // REG_WIDTH +1 bit adder to capture the carry-out
-        logic [REG_WIDTH:0] adder_result_ext = alu_op1 + op2verted + op_is_sub;
-        logic [REG_WIDTH-1:0] adder_result = adder_result_ext[REG_WIDTH-1:0];
+        adder_result_ext = alu_op1 + op2verted + op_is_sub;
+        adder_result = adder_result_ext[REG_WIDTH-1:0];
 
         // logic
-        logic [REG_WIDTH-1:0] and_result = alu_op1 & alu_op2;
-        logic [REG_WIDTH-1:0] or_result  = alu_op1 | alu_op2;
-        logic [REG_WIDTH-1:0] xor_result = alu_op1 ^ alu_op2;
+        and_result = alu_op1 & alu_op2;
+        or_result  = alu_op1 | alu_op2;
+        xor_result = alu_op1 ^ alu_op2;
         // shift
-        logic [4 : 0] shamt = alu_op2[4 : 0];
-        logic [REG_WIDTH-1:0] sll_result = alu_op1 << shamt;
-        logic [REG_WIDTH-1:0] srl_result = alu_op1 >> shamt;
-        logic [REG_WIDTH-1:0] sra_result = $signed(alu_op1) >>> shamt; 
+        shamt = alu_op2[4 : 0];
+        sll_result = alu_op1 << shamt;
+        srl_result = alu_op1 >> shamt;
+        sra_result = $signed(alu_op1) >>> shamt; 
 
         // result
         case (i_control.operation)
@@ -85,21 +105,21 @@ module alu #(
         o_zero = (adder_result == '0);
 
         // N (Sign): MSB of the result
-        logic N = adder_result[REG_WIDTH -1];
+        N = adder_result[REG_WIDTH -1];
 
         // C (Carry): Carry-out of the adder. 
         // For SUB (A + ~B + 1), C=1 means A >= B (no borrow)
-        logic C = adder_result_ext[REG_WIDTH];
+        C = adder_result_ext[REG_WIDTH];
 
         // V (Overflow): Signed overflow
-        logic op1_sign = alu_op1[REG_WIDTH-1];
-        logic op2_sign = alu_op2[REG_WIDTH-1];
-        logic add_overflow = (op1_sign == op2_sign) && (op1_sign != N);
-        logic sub_overflow = (op1_sign != op2_sign) && (op1_sign != N);
-        logic V = op_is_sub ? sub_overflow : add_overflow;
+        op1_sign = alu_op1[REG_WIDTH-1];
+        op2_sign = alu_op2[REG_WIDTH-1];
+        add_overflow = (op1_sign == op2_sign) && (op1_sign != N);
+        sub_overflow = (op1_sign != op2_sign) && (op1_sign != N);
+        V = op_is_sub ? sub_overflow : add_overflow;
 
-        logic signed_less_than   = N ^ V; // True if (N=1, V=0) or (N=0, V=1)
-        logic unsigned_less_than = ~C;    // True if C=0 (borrow occurred)
+        signed_less_than   = N ^ V; // True if (N=1, V=0) or (N=0, V=1)
+        unsigned_less_than = ~C;    // True if C=0 (borrow occurred)
         o_less_than = i_control.use_unsigned ? unsigned_less_than : signed_less_than;
     end
 

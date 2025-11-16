@@ -8,7 +8,7 @@ package alu_pkg;
         OP_XOR,
         OP_SLL,
         OP_SRL,
-        OP_SRA,
+        OP_SRA
     } risk_alu_e;
     
     typedef enum logic [1:0] {
