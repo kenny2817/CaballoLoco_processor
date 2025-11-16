@@ -30,6 +30,13 @@ ica: ${MODULES_DIR}/instruction_cache.sv ${TB_DIR}/ica_tb.sv
 arb: ${MODULES_DIR}/arbiter.sv ${TB_DIR}/arb_tb.sv
 	${IVERILOG_COMPILE}
 
+cmp: $(PKG_DIR)/cmp_pkg.sv ${MODULES_DIR}/comparator.sv ${TB_DIR}/cmp_tb.sv
+	${IVERILOG_COMPILE}
+
+alu: $(PKG_DIR)/alu_pkg.sv ${MODULES_DIR}/arithmetic_logic_unit.sv ${TB_DIR}/alu_tb.sv
+	${IVERILOG_COMPILE}
+
+
 
 clean:
 	rm -f $(TARGETS) *.vcd

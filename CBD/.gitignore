@@ -4,5 +4,7 @@ stb
 tlb
 ica
 arb
+cmp
+alu
 
 *.vcd

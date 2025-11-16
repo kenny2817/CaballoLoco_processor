@@ -35,7 +35,7 @@ module alu #(
     logic [REG_WIDTH -1 : 0] sll_result;
     logic [REG_WIDTH -1 : 0] srl_result;
     logic [REG_WIDTH -1 : 0] sra_result;
-    logic [4 : 0]            shamt;
+    logic [4            : 0] shamt;
     logic                    op_is_sub;
 
     // flags
