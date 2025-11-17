@@ -10,6 +10,21 @@ define IVERILOG_COMPILE
 	@iverilog $(IFLAGS) -s $@_tb -o $@ $^ || (echo "failed - $@"; exit 1)
 	@echo "success - $@"
 endef
+define VERILATOR_COMPILE
+    @mkdir -p build/$@
+    
+    @verilator -Wall -Wno-fatal --binary \
+        --Mdir build/$@ \
+        --top-module $@_tb \
+        -o $@ \
+        $(filter-out $@,$^) || \
+        (echo "failed - $@"; exit 1)
+        
+    @cp build/$@/$@ $@
+    
+    @echo "success - $@"
+    @echo "Executable is at $@"
+endef
 
 .PHONY: all $(TARGETS) clean
 
@@ -21,8 +36,8 @@ tlb: ${MODULES_DIR}/translation_lookaside_buffer.sv ${TB_DIR}/tlb_tb.sv
 stb: ${MODULES_DIR}/store_buffer.sv ${TB_DIR}/stb_tb.sv
 	${IVERILOG_COMPILE}
 
-dca: ${MODULES_DIR}/data_cache.sv ${TB_DIR}/dca_tb.sv
-	${IVERILOG_COMPILE}
+dca: ${PKG_DIR}/cache_pkg.sv ${MODULES_DIR}/data_cache.sv ${TB_DIR}/dca_tb.sv
+	${VERILATOR_COMPILE}
 
 ica: ${MODULES_DIR}/instruction_cache.sv ${TB_DIR}/ica_tb.sv
 	${IVERILOG_COMPILE}
