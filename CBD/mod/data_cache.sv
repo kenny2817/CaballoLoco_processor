@@ -74,6 +74,12 @@ module dca #(
 
     logic                                   mem_hit     [2];
 
+    logic [LINE_WIDTH -1 : 0]                line_read;
+    logic [31 : 0]                           word_read;
+    logic [15 : 0]                           half_read;
+    logic [7 : 0]                            byte_read;
+
+
     cache_state                             state;
     cache_state                             next_state;
 
@@ -150,12 +156,26 @@ module dca #(
         end
 
         // read data logic
-        case (i_load.size)
-            SIZE_BYTE: o_read_data <= {24'd0, memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -:  8]};
-            SIZE_HALF: o_read_data <= {16'd0, memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -: 16]};
-            SIZE_WORD: o_read_data <=         memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -: 32] ;
-            default:   o_read_data <=                                                                             'x ;
-        endcase
+        line_read = memory[addr_data.index][hit_index];
+        word_read = line_read[(addr_data.offset +1) * 32 -1 -: 32];
+        half_read = line_read[(addr_data.offset +1) * 16 -1 -: 16];
+        byte_read = line_read[(addr_data.offset +1) *  8 -1 -:  8];
+
+        if (i_load.use_unsigned) begin
+            case (i_load.size)
+                SIZE_BYTE: o_read_data <= {24'b0, byte_read};
+                SIZE_HALF: o_read_data <= {16'b0, half_read};
+                SIZE_WORD: o_read_data <=         word_read ;
+                default:   o_read_data <=                'x ;
+            endcase
+        end else begin
+            case (i_load.size)
+                SIZE_BYTE: o_read_data <= {24'b0, {(byte_read[7])},  byte_read};
+                SIZE_HALF: o_read_data <= {16'b0, {(half_read[15])}, half_read};
+                SIZE_WORD: o_read_data <=                            word_read ;
+                default:   o_read_data <=                                   'x ;
+            endcase
+        end
         // o_read_data = memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -: ELEMENT_WIDTH];
         o_stall = (i_load.enable && !o_hit);
     end
