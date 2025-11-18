@@ -4,12 +4,14 @@ module dme #(
     parameter TLB_LINES,
     parameter CACHE_SECTORS,
     parameter CACHE_LINES,
-    parameter CACHE_ELEMENTS,
+    parameter CACHE_BYTES,
     parameter STB_LINES,
     parameter REG_WIDTH, 
     parameter VA_WIDTH, 
     parameter PA_WIDTH,
-    localparam INDEX_WIDTH   = $clog2(CACHE_LINES)
+    parameter ID_WIDTH,
+    localparam INDEX_WIDTH   = $clog2(CACHE_LINES),
+    localparam LINE_WIDTH    = CACHE_BYTES * 8
 ) (
     input logic                         clk,
     input logic                         rst,
@@ -40,7 +42,6 @@ module dme #(
     input logic [ID_WIDTH -1 : 0]       i_mem_id_response
 );
 
-    localparam CACHE_BYTES = REG_WIDTH / 8;
 
     mem_data_t                          load_commit;
     mem_data_t                          store_commit;
@@ -68,10 +69,6 @@ module dme #(
 
     assign o_data_loaded = stb_hit ? stb_data : cache_data;
     assign o_stall = stb_stall || cache_stall;
-    // assign enable = !o_exeption && (i_control.is_load || stb_commit.enable);
-    // assign virtual_addr = i_control.is_load ? i_virtual_addr : stb_commit.address;
-    // assign use_unsigned = i_control.is_load ? i_control.use_unsigned : stb_commit.use_unsigned;
-    // assign size = i_control.is_load ? i_control.size : stb_commit.size;
 
     tlb #(
         .N_LINES(TLB_LINES),
@@ -81,7 +78,7 @@ module dme #(
         .clk(clk),
         .rst(rst),
 
-        .i_write_enable(i_write_enable),
+        .i_enable(i_write_enable),
         .i_virtual_addr(virtual_addr), // both write and read
         .i_physical_addr(i_physical_addr),
 
@@ -96,7 +93,7 @@ module dme #(
         .clk(clk),
         .rst(rst),
         
-        .i_control(store_commit),
+        .i_store(store_commit),
 
         .i_load_cache(i_control.is_load),
         .i_hit_cache(cache_hit),
@@ -110,40 +107,36 @@ module dme #(
     );
 
     dca #(
+        .REG_WIDTH(REG_WIDTH),
         .N_SECTORS(CACHE_SECTORS),
         .N_LINES(CACHE_LINES),
-        .N_ELEMENTS(CACHE_ELEMENTS),
         .N_BYTES(CACHE_BYTES),
-        .VA_WIDTH(VA_WIDTH),
-        .PA_WIDTH(PA_WIDTH)
+        .PA_WIDTH(PA_WIDTH),
+        .ID_WIDTH(ID_WIDTH)
     ) CACHE (
         .clk(clk),
         .rst(rst),
         .rnd(rnd),
         
         .i_hit(stb_hit),
-        // .i_enable(enable),
-        // .i_is_load(i_control.is_load),
-        // .i_va_addr(virtual_addr),
-        .i_pa_addr(tlb_pa_addr),
-        // .i_write_data(stb_commit.data),
-        // .i_size(size),
-        // .i_use_unsigned(use_unsigned),
-
+        .i_pa(tlb_pa_addr),
+        .i_load(load_commit),
+        .i_store(stb_commit),
 
         .o_hit(cache_hit),
         .o_stall(cache_stall),
         .o_read_data(cache_data),
-
+        
         .o_mem_enable(o_mem_enable),
-        .o_mem_type(o_mem_type),
-        .o_mem_ack(o_mem_ack),
         .o_mem_addr(o_mem_addr),
         .o_mem_data(o_mem_data),
+        .o_mem_type(o_mem_write),
+        .o_mem_ack(o_mem_ack),
 
         .i_mem_enable(i_mem_enable),
         .i_mem_data(i_mem_data),
-        .i_mem_addr(i_mem_addr)
+        .i_mem_id_request(i_mem_id_request),
+        .i_mem_id_response(i_mem_id_response)
     );
 
 endmodule

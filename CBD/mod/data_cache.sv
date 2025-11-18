@@ -9,15 +9,14 @@ typedef enum logic [1:0] {
 } cache_state;
 
 module dca #(
+    parameter REG_WIDTH,                                     // register width in bits
     parameter N_SECTORS,                                    // number of sectors
     parameter N_LINES,                                      // number of lines per sector
-    parameter N_ELEMENTS,                                   // number of elements per line
-    parameter N_BYTES,                                      // number of bytes per element
+    parameter N_BYTES,                                      // number of bytes per line
     parameter PA_WIDTH,                                     // physical address width (this should be already the tag!)
     parameter ID_WIDTH,                                     // id width for memory requests
     
-    localparam ELEMENT_WIDTH = N_BYTES * 8,                 // element width in bits
-    localparam LINE_WIDTH    = N_ELEMENTS * ELEMENT_WIDTH,  // line width in bits
+    localparam LINE_WIDTH    = N_BYTES * 8,              // line width in bits
     localparam INDEX_WIDTH   = $clog2(N_LINES)              // index width in bits
 ) (
     input logic                             clk,
@@ -31,7 +30,7 @@ module dca #(
 
     output logic                            o_hit,
     output logic                            o_stall,
-    output logic [ELEMENT_WIDTH -1 : 0]     o_read_data,
+    output logic [REG_WIDTH -1 : 0]         o_read_data,
 
     // mem  
     output logic                            o_mem_enable,
@@ -47,7 +46,7 @@ module dca #(
 );
 
     localparam SECTOR_WIDTH = $clog2(N_SECTORS);
-    localparam OFFSET_WIDTH = $clog2(N_ELEMENTS);
+    localparam OFFSET_WIDTH = $clog2(N_BYTES);
 
     typedef struct packed {
         logic [SECTOR_WIDTH -1 : 0]             index;
@@ -121,7 +120,11 @@ module dca #(
 
         task automatic store_hit(  
         );
-            memory[addr_store.index][hit_index][(addr_store.offset +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH] <= i_store.data;
+            case(i_store.size)
+                SIZE_BYTE: memory[addr_store.index][hit_index][(addr_store.offset +1) * 32 -1 -:  8] <= i_store.data[ 7: 0];
+                SIZE_HALF: memory[addr_store.index][hit_index][(addr_store.offset +1) * 32 -1 -: 16] <= i_store.data[15: 0];
+                SIZE_WORD: memory[addr_store.index][hit_index][(addr_store.offset +1) * 32 -1 -: 32] <= i_store.data[31: 0];
+            endcase
             dirty_bit[addr_store.index][hit_index] <= 1'b1;
         endtask
 
@@ -146,8 +149,14 @@ module dca #(
             end
         end
 
-        // output logic
-        o_read_data = memory[addr_data.index][hit_index][(addr_data.offset +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH];
+        // read data logic
+        case (i_load.size)
+            SIZE_BYTE: o_read_data <= {24'd0, memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -:  8]};
+            SIZE_HALF: o_read_data <= {16'd0, memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -: 16]};
+            SIZE_WORD: o_read_data <=         memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -: 32] ;
+            default:   o_read_data <=                                                                             'x ;
+        endcase
+        // o_read_data = memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -: ELEMENT_WIDTH];
         o_stall = (i_load.enable && !o_hit);
     end
 

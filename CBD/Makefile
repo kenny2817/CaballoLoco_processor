@@ -51,7 +51,8 @@ cmp: $(PKG_DIR)/cmp_pkg.sv ${MODULES_DIR}/comparator.sv ${TB_DIR}/cmp_tb.sv
 alu: $(PKG_DIR)/alu_pkg.sv ${MODULES_DIR}/arithmetic_logic_unit.sv ${TB_DIR}/alu_tb.sv
 	${IVERILOG_COMPILE}
 
-
+dme: ${PKG_DIR}/cache_pkg.sv ${MODULES_DIR}/data_cache.sv ${MODULES_DIR}/translation_lookaside_buffer.sv ${MODULES_DIR}/store_buffer.sv ${MODULES_DIR}/data_memory.sv ${TB_DIR}/dme_tb.sv
+	${VERILATOR_COMPILE}
 
 clean:
 	rm -f $(TARGETS) *.vcd

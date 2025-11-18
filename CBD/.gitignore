@@ -6,5 +6,8 @@ ica
 arb
 cmp
 alu
+dme
 
 *.vcd
+
+build/
