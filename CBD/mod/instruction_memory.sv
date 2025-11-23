@@ -3,7 +3,6 @@ module ime #(
     parameter TLB_LINES,
     parameter CACHE_SECTORS,
     parameter CACHE_LINES,
-    parameter CACHE_ELEMENTS,
     parameter CACHE_BYTES,
     parameter VA_WIDTH, 
     parameter PA_WIDTH,
@@ -16,8 +15,6 @@ module ime #(
 
     input logic                         i_enable,
     input logic [VA_WIDTH -1 : 0]       i_virtual_addr,
-
-    output logic                        i_write_data,
 
     output logic [CACHE_BYTES*8 -1 : 0] o_data_loaded,
     output logic                        o_exeption,
@@ -60,7 +57,6 @@ module ime #(
     ica #(
         .N_SECTORS(CACHE_SECTORS),
         .N_LINES(CACHE_LINES),
-        .N_ELEMENTS(CACHE_ELEMENTS),
         .N_BYTES(CACHE_BYTES),
         .VA_WIDTH(VA_WIDTH),
         .PA_WIDTH(PA_WIDTH),

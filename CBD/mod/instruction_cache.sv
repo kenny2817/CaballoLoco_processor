@@ -6,16 +6,15 @@ typedef enum logic [1:0] {
 
 
 module ica #(
+    parameter REG_WIDTH,                                    // register width
     parameter N_SECTORS,                                    // number of sectors
     parameter N_LINES,                                      // number of lines per sector
-    parameter N_ELEMENTS,                                   // number of elements per line
     parameter N_BYTES,                                      // number of bytes per element
     parameter VA_WIDTH,                                     // virtual address width
     parameter PA_WIDTH,                                     // physical address width (this should be already the tag!)
     parameter ID_WIDTH,                                     // memory id width
     
-    localparam ELEMENT_WIDTH = N_BYTES * 8,                 // element width in bits
-    localparam LINE_WIDTH    = N_ELEMENTS * ELEMENT_WIDTH,  // line width in bits
+    localparam LINE_WIDTH = N_BYTES * 8,                    // line width in bits
     localparam INDEX_WIDTH   = $clog2(N_LINES)              // index width in bits
 ) (
     input logic                             clk,
@@ -27,7 +26,7 @@ module ica #(
     input logic [PA_WIDTH -1 : 0]           i_pa_addr,
 
     output logic                            o_stall,
-    output logic [ELEMENT_WIDTH -1 : 0]     o_read_data,
+    output logic [31 : 0]                   o_read_data,
 
     // mem  
     output logic                            o_mem_enable,
@@ -35,14 +34,14 @@ module ica #(
     output logic                            o_mem_ack,
 
     input logic                             i_mem_enable,
-    input logic [LINE_WIDTH -1 : 0]         i_mem_data,
+    input logic [REG_WIDTH -1 : 0]          i_mem_data,
     input logic [ID_WIDTH -1 : 0]           i_mem_id_request,
     input logic [ID_WIDTH -1 : 0]           i_mem_id_response,
     input logic                             i_mem_in_use  // intra caches ack
 );
 
     localparam SECTOR_WIDTH = $clog2(N_SECTORS);
-    localparam OFFSET_WIDTH = $clog2(N_ELEMENTS);
+    localparam OFFSET_WIDTH = $clog2(N_BYTES);
 
     logic [LINE_WIDTH -1 : 0]               memory          [N_SECTORS][N_LINES];
     logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   tag             [N_SECTORS][N_LINES];
@@ -55,7 +54,7 @@ module ica #(
     logic [ID_WIDTH -1 : 0]                 mem_id;
     logic                                   hit;
     logic                                   mem_hit;
-    logic [ELEMENT_WIDTH -1 : 0]            read_data;
+    logic [REG_WIDTH -1 : 0]                read_data;
     logic [INDEX_WIDTH -1 : 0]              rnd_latch;
 
     cache_state                             state;
@@ -64,7 +63,7 @@ module ica #(
     // assignments
     assign addr_tag     = i_pa_addr[PA_WIDTH -1 : OFFSET_WIDTH];
     assign addr_idx     = i_va_addr[SECTOR_WIDTH + OFFSET_WIDTH -1 : OFFSET_WIDTH];
-    assign addr_off     = i_va_addr[OFFSET_WIDTH -1 : 0];
+    assign addr_off     = {i_va_addr[OFFSET_WIDTH -1 : 2], 2'd0}; // word aligned
 
     // assign o_stall      = i_enable && !hit && !mem_hit;
     assign o_stall      = i_enable && !hit;
@@ -91,7 +90,7 @@ module ica #(
 
         // output logic
         // read_data = memory[addr_idx][hit_index][(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH];
-        o_read_data = memory[addr_idx][hit_index][(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH];
+        o_read_data = memory[addr_idx][hit_index][(addr_off +1) * 8 -1 -: REG_WIDTH];
     end
 
     always_comb begin : state_machine
