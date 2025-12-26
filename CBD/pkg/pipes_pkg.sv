@@ -40,6 +40,7 @@ package pipes_pkg;
     typedef struct packed {
         logic [REG_WIDTH-1 : 0] alu_result;
         logic [REG_WIDTH-1 : 0] mem_data;
+        logic                   is_load;
         wb_control_t            wb_control;
     } cable_pipe_W_t;
 

@@ -168,6 +168,15 @@ module cbd #(
     );
 
     // BYPASS
+    logic [REG_WIDTH -1 : 0] bypass_rs1, bypass_rs2;
+    assign bypass_rs1 = (o_pipe_M.wb_control.is_write_back && (o_pipe_M.wb_control.rdf == select_rs1)) ? o_pipe_M.alu_result :
+                        (o_pipe_W.wb_control.is_write_back && (o_pipe_W.wb_control.rdf == select_rs1)) ? o_pipe_W.alu_result :
+                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rdf == select_rs1)) ? o_pipe_WC.mux_result :
+                        o_pipe_A.rs1;
+    assign bypass_rs2 = (o_pipe_M.wb_control.is_write_back && (o_pipe_M.wb_control.rdf == select_rs2)) ? o_pipe_M.alu_result :
+                        (o_pipe_W.wb_control.is_write_back && (o_pipe_W.wb_control.rdf == select_rs2)) ? o_pipe_W.alu_result :
+                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rdf == select_rs2)) ? o_pipe_WC.mux_result :
+                        o_pipe_A.rs2;
 
     // ALU
     alu ALU (
@@ -175,8 +184,8 @@ module cbd #(
         .rst(rst),
 
         .i_control(o_pipe_A.alu_control),
-        .i_rs1(o_pipe_A.rs1), // bypass
-        .i_rs2(o_pipe_A.rs2), // bypass
+        .i_rs1(bypass_rs1), // bypass
+        .i_rs2(bypass_rs2), // bypass
         .i_imm(o_pipe_A.imm),
         .i_pc(o_pipe_A.pc),
 
@@ -280,6 +289,7 @@ module cbd #(
     );
 
     // MUX
+    assign i_pipe_WC.mux_result = o_pipe_W.is_load ? o_pipe_W.mem_data : o_pipe_W.alu_result;
 
 // PIPE_WC ===============================================================
     pipe #(
