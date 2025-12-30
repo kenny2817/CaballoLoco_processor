@@ -4,7 +4,7 @@ PKG_DIR = pkg
 TB_DIR = tb
 # PKGS = $(PKG_DIR)/alu_pkg.sv $(PKG_DIR)/cmp_pkg.sv $(PKG_DIR)/opcodes_pkg.sv
 PKGS = $(PKG_DIR)/*
-TARGETS = dca stb tlb arb ica
+TARGETS = dca stb tlb arb ica mem
 
 define IVERILOG_COMPILE
 	@iverilog $(IFLAGS) -s $@_tb -o $@ $^ || (echo "failed - $@"; exit 1)
@@ -52,6 +52,9 @@ alu: $(PKG_DIR)/alu_pkg.sv ${MODULES_DIR}/arithmetic_logic_unit.sv ${TB_DIR}/alu
 	${IVERILOG_COMPILE}
 
 dme: ${PKG_DIR}/cache_pkg.sv ${MODULES_DIR}/data_cache.sv ${MODULES_DIR}/translation_lookaside_buffer.sv ${MODULES_DIR}/store_buffer.sv ${MODULES_DIR}/data_memory.sv ${TB_DIR}/dme_tb.sv
+	${VERILATOR_COMPILE}
+
+mem: ${MODULES_DIR}/memory.sv ${TB_DIR}/mem_tb.sv
 	${VERILATOR_COMPILE}
 
 clean:

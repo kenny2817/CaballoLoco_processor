@@ -26,7 +26,7 @@ module alu #(
     logic [REG_WIDTH-1:0] alu_op2;
 
     // internal logic
-    logic [REG_WIDTH    : 0] adder_result_ext;
+    logic [REG_WIDTH    : 0] adder_result_ext; // dim is REG_WIDTH + 1 to contain the carry-out (extra bit)
     logic [REG_WIDTH -1 : 0] adder_result;
     logic [REG_WIDTH -1 : 0] op2verted;
     logic [REG_WIDTH -1 : 0] and_result;
@@ -35,7 +35,10 @@ module alu #(
     logic [REG_WIDTH -1 : 0] sll_result;
     logic [REG_WIDTH -1 : 0] srl_result;
     logic [REG_WIDTH -1 : 0] sra_result;
-    logic [4            : 0] shamt;
+
+    // localparam int SHAMT_WIDTH = $clog2(REG_WIDTH);
+    // logic [SHAMT_WIDTH-1: 0] shamt;
+    logic [4            : 0] shamt; //TODO: to be parametrized for sizes other than 32
     logic                    op_is_sub;
 
     // flags
@@ -80,7 +83,8 @@ module alu #(
         or_result  = alu_op1 | alu_op2;
         xor_result = alu_op1 ^ alu_op2;
         // shift
-        shamt = alu_op2[4 : 0];
+        // shamt = alu_op2[SHAMT_WIDTH-1:0];
+        shamt = alu_op2[4 : 0]; //TODO: to be parametrized for sizes other than 32
         sll_result = alu_op1 << shamt;
         srl_result = alu_op1 >> shamt;
         sra_result = $signed(alu_op1) >>> shamt; 
@@ -117,6 +121,10 @@ module alu #(
         add_overflow = (op1_sign == op2_sign) && (op1_sign != N);
         sub_overflow = (op1_sign != op2_sign) && (op1_sign != N);
         V = op_is_sub ? sub_overflow : add_overflow;
+
+        // alternativa più semplice per less-than signed usando compare diretto
+        // signed_less_than = ($signed(alu_op1) < $signed(alu_op2));
+        // unsigned_less_than = ($unsigned(alu_op1) < $unsigned(alu_op2));
 
         signed_less_than   = N ^ V; // True if (N=1, V=0) or (N=0, V=1)
         unsigned_less_than = ~C;    // True if C=0 (borrow occurred)
