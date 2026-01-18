@@ -1,3 +1,4 @@
+import pipes_pkg::*;
 
 module cbd #(
 ) (
@@ -8,8 +9,13 @@ module cbd #(
 // LOCAL PARAMETERS =====================================================
     parameter int NUM_REG = 32;
     parameter int REG_WIDTH = 32;
+    parameter int TODO = 4;
 
 // CABLE MANAGEMENT =====================================================
+
+    // pipeline control
+    logic enable_pipe_F, enable_pipe_D, enable_pipe_A, enable_pipe_M, enable_pipe_W, enable_pipe_WC;
+    logic flush_pipe_D, flush_pipe_A, flush_pipe_M, flush_pipe_W, flush_pipe_WC;
 
     // control cables
     cable_pipe_D_t          i_pipe_D, o_pipe_D;
@@ -40,12 +46,12 @@ module cbd #(
 
 // PROGRAM COUNTER ======================================================
     reg_mono #(
-        .DATA_WIDTH()
+        .DATA_WIDTH(REG_WIDTH)
     ) PC (
         .clk(clk),
         .rst(rst),
 
-        .i_write_enable(),
+        .i_write_enable(enable_pipe_F),
         .i_write_data(pc),
         .o_read_data(i_pipe_D.pc)
     );
@@ -64,14 +70,14 @@ module cbd #(
     end
 
     // INSTRUCTION MEMORY
-    ime IME #(
-        .TLB_LINES(),
-        .CACHE_SECTORS(),
-        .CACHE_LINES(),
-        .CACHE_BYTES(),
-        .VA_WIDTH(),
-        .PA_WIDTH(),
-        .ID_WIDTH()
+    ime #(
+        .TLB_LINES(TODO),
+        .CACHE_SECTORS(TODO),
+        .CACHE_LINES(TODO),
+        .CACHE_BYTES(TODO),
+        .VA_WIDTH(TODO),
+        .PA_WIDTH(TODO),
+        .ID_WIDTH(TODO)
     ) IME (
         .clk(clk),
         .rst(rst),
@@ -81,8 +87,8 @@ module cbd #(
         .i_virtual_addr(i_pipe_D.pc),
 
         .o_data_loaded(i_pipe_D.instruction),
-        .o_exeption(),
-        .o_stall(),
+        .o_tlb_miss(tlb_miss_D),
+        .o_cache_miss(cache_miss_D),
 
         // tlb write
         .i_write_enable(),
@@ -101,12 +107,20 @@ module cbd #(
     );
 
 // PIPE_D ===============================================================
+
+    localparam cable_pipe_D_t flush_value_D = '{
+        instruction : 32'h00000013, // NOP
+        pc          : 32'h00000000
+    };
+
     pipe #(
-        .CABLE_T(cable_pipe_D_t)
+        .CABLE_T(cable_pipe_D_t),
+        .FLUSH_VALUE(flush_value_D)
     ) PIPE_D (
         .clk(clk),
         .rst(rst),
-        .enable(),
+        .enable(enable_pipe_D),
+        .flush(flush_pipe_D),
 
         .i_pipe(i_pipe_D),
 
@@ -132,7 +146,9 @@ module cbd #(
 
         .o_jal(ide_jal),
         .o_jalr(i_pipe_A.jalr),
-        .o_use_flag(i_pipe_A.use_flag)
+        .o_use_flag(i_pipe_A.use_flag),
+
+        .o_bad_instruction(bad_instruction)
     );
 
     // REGISTER FILE
@@ -155,12 +171,17 @@ module cbd #(
     assign i_pipe_A.rs2 = registers[select_rs2];
 
 // PIPE_A ===============================================================
+
+    localparam cable_pipe_A_t flush_value_A = '0;
+
     pipe #(
-        .CABLE_T(cable_pipe_A_t)
+        .CABLE_T(cable_pipe_A_t),
+        .FLUSH_VALUE(flush_value_A)
     ) PIPE_A (
         .clk(clk),
         .rst(rst),
-        .enable(),
+        .enable(enable_pipe_A),
+        .flush(flush_pipe_A),
 
         .i_pipe(i_pipe_A),
 
@@ -222,12 +243,17 @@ module cbd #(
     );  
 
 // PIPE_M ===============================================================
+
+    localparam cable_pipe_M_t flush_value_M = '0;
+
     pipe #(
-        .CABLE_T(cable_pipe_M_t)
+        .CABLE_T(cable_pipe_M_t),
+        .FLUSH_VALUE(flush_value_M)
     ) PIPE_M (
         .clk(clk),
         .rst(rst),
-        .enable(),
+        .enable(enable_pipe_M),
+        .flush(flush_pipe_M),
 
         .i_pipe(i_pipe_M),
 
@@ -235,16 +261,16 @@ module cbd #(
     );
 
     // DATA MEMORY
-    dme DME #(
-        .TLB_LINES(),
-        .CACHE_SECTORS(),
-        .CACHE_LINES(),
-        .CACHE_BYTES(),
-        .STB_LINES(),
-        .REG_WIDTH(),
-        .VA_WIDTH(),
-        .PA_WIDTH(),
-        .ID_WIDTH()
+    dme #(
+        .TLB_LINES(TODO),
+        .CACHE_SECTORS(TODO),
+        .CACHE_LINES(TODO),
+        .CACHE_BYTES(TODO),
+        .STB_LINES(TODO),
+        .REG_WIDTH(TODO),
+        .VA_WIDTH(TODO),
+        .PA_WIDTH(TODO),
+        .ID_WIDTH(TODO)
     ) DME (
         .clk(clk),
         .rst(rst),
@@ -255,8 +281,9 @@ module cbd #(
         .i_write_data(o_pipe_A.rs2),
 
         .o_data_loaded(i_pipe_W.mem_data),
-        .o_exeption(),
-        .o_stall(),
+        .o_tlb_miss(tlb_miss_M),
+        .o_cache_miss(tlb_miss_M),
+        .o_stb_full(stb_full_M),
 
         // tlb write
         .i_write_enable(),
@@ -276,12 +303,17 @@ module cbd #(
     );
 
 // PIPE_W ===============================================================
+
+    localparam cable_pipe_W_t flush_value_W = '0;
+
     pipe #(
-        .CABLE_T(cable_pipe_W_t)
+        .CABLE_T(cable_pipe_W_t),
+        .FLUSH_VALUE(flush_value_W)
     ) PIPE_W (
         .clk(clk),
         .rst(rst),
-        .enable(),
+        .enable(enable_pipe_W),
+        .flush(flush_pipe_W),
 
         .i_pipe(i_pipe_W),
 
@@ -291,25 +323,59 @@ module cbd #(
     // MUX
     assign i_pipe_WC.mux_result = o_pipe_W.is_load ? o_pipe_W.mem_data : o_pipe_W.alu_result;
 
-// PIPE_WC ===============================================================
+// PIPE_WC ==============================================================
+
+    localparam cable_pipe_WC_t flush_value_WC = '0;
+    
     pipe #(
-        .CABLE_T(cable_pipe_WC_t)
+        .CABLE_T(cable_pipe_WC_t),
+        .FLUSH_VALUE(flush_value_WC)
     ) PIPE_WC (
         .clk(clk),
         .rst(rst),
-        .enable(),
+        .enable(enable_pipe_WC),
+        .flush(flush_pipe_WC),
 
         .i_pipe(i_pipe_WC),
 
         .o_pipe(o_pipe_WC)
     );
 
+// HAZARD UNIT ==========================================================
+    
+    logic tlb_miss_D, cache_miss_D;
+    logic tlb_miss_M, cache_miss_M, stb_full_M;
+    logic mem_full;
+    logic bad_instruction;
+
+    // STALL
+    logic stall_pipeline, stall_load_bypass;
+    assign stall_pipeline = mem_full || tlb_miss_M || cache_miss_M || stb_full_M;
+    assign stall_load_bypass = o_pipe_A.mem_control.is_load && ((o_pipe_A.wb_control.rd == select_rs1) || (o_pipe_A.wb_control.rd == select_rs2));
+
+    assign enable_pipe_F  = !(stall_pipeline || stall_load_bypass);
+    assign enable_pipe_D  = !(stall_pipeline || stall_load_bypass);
+    assign enable_pipe_A  = !(stall_pipeline);
+    assign enable_pipe_M  = !(stall_pipeline);
+    assign enable_pipe_W  = !(stall_pipeline);
+    assign enable_pipe_WC = !(stall_pipeline);
+
+    // FLUSH
+    logic branch_misprediction;
+    assign branch_misprediction = (cmp_branch); // for now no branch prediction implemented
+
+    assign flush_pipe_D   = (branch_misprediction || ipipe_A.jalr);
+    assign flush_pipe_A   = (branch_misprediction || stall_load_bypass || bad_instruction);
+    assign flush_pipe_M   = (0); // no flush in M
+    assign flush_pipe_W   = (0); // no flush in W
+    assign flush_pipe_WC  = (0); // no flush in WC
+
 // MEMORY ===============================================================
 
     arb #(
-        .PA_WIDTH(),
-        .LINE_WIDTH(),
-        .ID_WIDTH()
+        .PA_WIDTH(TODO),
+        .LINE_WIDTH(TODO),
+        .ID_WIDTH(TODO)
     ) ARB (
         .clk(clk),
         .rst(rst),

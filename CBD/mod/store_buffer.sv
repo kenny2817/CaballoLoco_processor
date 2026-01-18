@@ -18,7 +18,7 @@ module stb #(
     output mem_data_t               o_commit,
 
     // stall
-    output logic                    o_stall,
+    output logic                    o_full,
 
     // bypass
     output logic                    o_hit,
@@ -31,7 +31,7 @@ module stb #(
     logic [LINE_SELECT -1 : 0]      oldest_line, newest_line, load_index;
     logic                           hit_cache, load_cache;
 
-    assign o_stall = i_store.enable && buffer[newest_line].enable; // buffer full
+    assign o_full = i_store.enable && buffer[newest_line].enable; // buffer full
 
     assign o_commit = buffer[oldest_line];
 

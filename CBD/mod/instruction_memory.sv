@@ -17,8 +17,8 @@ module ime #(
     input logic [VA_WIDTH -1 : 0]       i_virtual_addr,
 
     output logic [CACHE_BYTES*8 -1 : 0] o_data_loaded,
-    output logic                        o_exeption,
-    output logic                        o_stall,
+    output logic                        o_tlb_miss,
+    output logic                        o_cache_miss,
 
     // tlb write
     input logic                         i_write_enable,
@@ -51,7 +51,7 @@ module ime #(
         .i_physical_addr(i_physical_addr),
 
         .o_physical_addr(tlb_pa_addr),
-        .o_exeption(o_exeption)
+        .o_miss(o_tlb_miss)
     );
 
     ica #(
@@ -70,7 +70,7 @@ module ime #(
         .i_va_addr(i_virtual_addr),
         .i_pa_addr(tlb_pa_addr),
 
-        .o_stall(o_stall),
+        .o_miss(o_cache_miss),
 
         .o_mem_enable(o_mem_enable),
         .o_mem_addr(o_mem_addr),

@@ -12,7 +12,7 @@ module tlb #(
     input logic [PA_WIDTH -1 : 0] i_physical_addr,
 
     output logic [PA_WIDTH -1 : 0] o_physical_addr,
-    output logic o_exeption
+    output logic o_miss
 );
     localparam LINE_SELECT = $clog2(N_LINES);
 
@@ -34,7 +34,7 @@ module tlb #(
             end
         end
         
-        o_exeption = !hit_found;
+        o_miss = !hit_found;
         o_physical_addr = physical_addr;
     end
 

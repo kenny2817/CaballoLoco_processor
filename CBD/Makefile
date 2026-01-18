@@ -4,7 +4,7 @@ PKG_DIR = pkg
 TB_DIR = tb
 # PKGS = $(PKG_DIR)/alu_pkg.sv $(PKG_DIR)/cmp_pkg.sv $(PKG_DIR)/opcodes_pkg.sv
 PKGS = $(PKG_DIR)/*
-TARGETS = dca stb tlb arb ica mem
+TARGETS = dca stb tlb arb ica mem cmp alu dme
 
 define IVERILOG_COMPILE
 	@iverilog $(IFLAGS) -s $@_tb -o $@ $^ || (echo "failed - $@"; exit 1)
@@ -33,7 +33,7 @@ icarus: $(TARGETS)
 tlb: ${MODULES_DIR}/translation_lookaside_buffer.sv ${TB_DIR}/tlb_tb.sv
 	${IVERILOG_COMPILE}
 
-stb: ${MODULES_DIR}/store_buffer.sv ${TB_DIR}/stb_tb.sv
+stb: ${PKG_DIR}/cache_pkg.sv ${MODULES_DIR}/store_buffer.sv ${TB_DIR}/stb_tb.sv
 	${IVERILOG_COMPILE}
 
 dca: ${PKG_DIR}/cache_pkg.sv ${MODULES_DIR}/data_cache.sv ${TB_DIR}/dca_tb.sv
@@ -55,6 +55,9 @@ dme: ${PKG_DIR}/cache_pkg.sv ${MODULES_DIR}/data_cache.sv ${MODULES_DIR}/transla
 	${VERILATOR_COMPILE}
 
 mem: ${MODULES_DIR}/memory.sv ${TB_DIR}/mem_tb.sv
+	${VERILATOR_COMPILE}
+
+cbd: ${PKG_DIR}/* ${MODULES_DIR}/caballodesquiciado_cached.sv
 	${VERILATOR_COMPILE}
 
 clean:

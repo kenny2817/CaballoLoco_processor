@@ -2,6 +2,7 @@ import alu_pkg::*;
 import cmp_pkg::*;
 import mdu_pkg::*;
 import cache_pkg::*;
+import cable_pkg::*;
 
 package pipes_pkg;
     parameter int REG_WIDTH = 32;

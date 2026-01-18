@@ -29,7 +29,7 @@ module dca #(
     input logic [PA_WIDTH -1 : 0]           i_pa,
 
     output logic                            o_hit,
-    output logic                            o_stall,
+    output logic                            o_miss,
     output logic [REG_WIDTH -1 : 0]         o_read_data,
 
     // mem  
@@ -177,7 +177,7 @@ module dca #(
             endcase
         end
         // o_read_data = memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -: ELEMENT_WIDTH];
-        o_stall = (i_load.enable && !o_hit);
+        o_miss = (i_load.enable && !o_hit);
     end
 
     always_comb begin : state_machine

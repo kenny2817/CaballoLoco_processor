@@ -6,6 +6,7 @@ module dca_tb;
     // ------------------------------------------------------------
     // Parameters (adapt them to match your design)
     // ------------------------------------------------------------
+    localparam REG_WIDTH   = 32;
     localparam N_SECTORS   = 2;
     localparam N_LINES     = 4;
     localparam N_ELEMENTS  = 4;
@@ -51,9 +52,9 @@ module dca_tb;
     // Instantiate the DUT
     // ------------------------------------------------------------
     dca #(
+        .REG_WIDTH(REG_WIDTH),
         .N_SECTORS(N_SECTORS),
         .N_LINES(N_LINES),
-        .N_ELEMENTS(N_ELEMENTS),
         .N_BYTES(N_BYTES),
         .PA_WIDTH(PA_WIDTH),
         .ID_WIDTH(ID_WIDTH)
@@ -69,7 +70,7 @@ module dca_tb;
         .i_pa(i_pa),
 
         .o_hit(o_hit),
-        .o_stall(o_stall),
+        .o_miss(o_stall),
         .o_read_data(o_read_data),
 
         .o_mem_enable(o_mem_enable),
