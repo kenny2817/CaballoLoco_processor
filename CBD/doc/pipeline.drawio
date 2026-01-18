@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="taP4mjLMGCfiDY7h4ge0" name="Page-1">
-        <mxGraphModel dx="1136" dy="774" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+        <mxGraphModel dx="1250" dy="867" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -213,7 +213,7 @@
                 <mxCell id="12" value="" style="edgeStyle=none;html=1;" parent="16" source="13" target="15" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="13" value="&lt;div&gt;M&lt;/div&gt;&lt;div&gt;DATA CACHE&lt;/div&gt;&lt;div&gt;BYPASS&lt;/div&gt;" style="whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#d5e8d4;strokeColor=#82b366;" parent="16" vertex="1">
+                <mxCell id="13" value="&lt;div&gt;M&lt;/div&gt;&lt;div&gt;DATA CACHE&lt;/div&gt;&lt;div&gt;SB&amp;nbsp;&lt;span style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;BYPASS&lt;/span&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;verticalAlign=top;fillColor=#d5e8d4;strokeColor=#82b366;" parent="16" vertex="1">
                     <mxGeometry x="529.6003696003696" width="138.1566181566182" height="80.00000000000001" as="geometry"/>
                 </mxCell>
                 <mxCell id="44" style="edgeStyle=none;html=1;" parent="16" source="15" target="9" edge="1">

@@ -21,7 +21,7 @@ module stb_tb;
         .clk(clk),
         .rst(rst),
 
-        .i_is_store(is_store),
+        .i_store(is_store),
         .i_adress(adress),
         .i_write_data(write_data),
 

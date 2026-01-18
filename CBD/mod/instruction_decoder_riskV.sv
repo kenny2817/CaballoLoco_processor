@@ -21,7 +21,9 @@ module ide (
 
     output logic            o_jal,
     output logic            o_jalr,
-    output logic            o_use_flag
+    output logic            o_use_flag,
+
+    output logic           o_bad_instruction
 );
 
     decoded_instr_t decoded;
@@ -40,8 +42,10 @@ module ide (
         endtask
 
         task automatic set_mdu(
+            logic                       enable,
             risk_mdu_e                  operation
         );
+            o_mdu_control.enable        = enable;
             o_mdu_control.operation     = operation;
         endtask
 
@@ -77,7 +81,7 @@ module ide (
         o_imm = decoded.imm;
 
         set_alu('x, 'x, 'x, 'x);
-        set_mdu('x);
+        set_mdu(1'b0, 'x);
         set_mem(1'b0, 1'b0, 'x, 'x);
         set_cmp(1'b0, 'x, 'x);
 
@@ -85,6 +89,8 @@ module ide (
         o_wb_control.rd             = decoded.rd;
         o_jal                      = 1'b0;
         o_use_flag                  = 1'b0;
+
+        o_bad_instruction          = decoded.valid;
 
         if (decoded.valid) begin            
             case (decoded.format)
@@ -103,14 +109,14 @@ module ide (
                         INSTR_SLT:      set_alu(OP_SUB, OP_REG, OP_REG, 1'b0);
                         INSTR_SLTU:     set_alu(OP_SUB, OP_REG, OP_REG, 1'b1);
 
-                        INSTR_MUL:      set_mdu(OP_MUL   );
-                        INSTR_MULH:     set_mdu(OP_MULH  );
-                        INSTR_MULHSU:   set_mdu(OP_MULHSU);
-                        INSTR_MULHU:    set_mdu(OP_MULHU );
-                        INSTR_DIV:      set_mdu(OP_DIV   );
-                        INSTR_DIVU:     set_mdu(OP_DIVU  );
-                        INSTR_REM:      set_mdu(OP_REM   );
-                        INSTR_REMU:     set_mdu(OP_REMU  );
+                        INSTR_MUL:      set_mdu(1'b1, OP_MUL   );
+                        INSTR_MULH:     set_mdu(1'b1, OP_MULH  );
+                        INSTR_MULHSU:   set_mdu(1'b1, OP_MULHSU);
+                        INSTR_MULHU:    set_mdu(1'b1, OP_MULHU );
+                        INSTR_DIV:      set_mdu(1'b1, OP_DIV   );
+                        INSTR_DIVU:     set_mdu(1'b1, OP_DIVU  );
+                        INSTR_REM:      set_mdu(1'b1, OP_REM   );
+                        INSTR_REMU:     set_mdu(1'b1, OP_REMU  );
                     endcase
                 end 
                 FMT_I: begin
@@ -170,6 +176,12 @@ module ide (
                     case (decoded.instr_type)
                         INSTR_JAL: o_jal = 1'b1;
                     endcase
+                end
+                FMT_UNKNOWN: begin
+                    // do nothing, all outputs are already in default values
+                end
+                default: begin
+                    // do nothing, all outputs are already in default values
                 end
             endcase
         end

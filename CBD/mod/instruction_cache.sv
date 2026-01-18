@@ -25,7 +25,7 @@ module ica #(
     input logic [VA_WIDTH -1 : 0]           i_va_addr,
     input logic [PA_WIDTH -1 : 0]           i_pa_addr,
 
-    output logic                            o_stall,
+    output logic                            o_miss,
     output logic [31 : 0]                   o_read_data,
 
     // mem  
@@ -42,6 +42,7 @@ module ica #(
 
     localparam SECTOR_WIDTH = $clog2(N_SECTORS);
     localparam OFFSET_WIDTH = $clog2(N_BYTES);
+    localparam NOP = 32'b00000000000000000000000000010011;
 
     logic [LINE_WIDTH -1 : 0]               memory          [N_SECTORS][N_LINES];
     logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   tag             [N_SECTORS][N_LINES];
@@ -65,8 +66,8 @@ module ica #(
     assign addr_idx     = i_va_addr[SECTOR_WIDTH + OFFSET_WIDTH -1 : OFFSET_WIDTH];
     assign addr_off     = {i_va_addr[OFFSET_WIDTH -1 : 2], 2'd0}; // word aligned
 
-    // assign o_stall      = i_enable && !hit && !mem_hit;
-    assign o_stall      = i_enable && !hit;
+    // assign o_miss      = i_enable && !hit && !mem_hit;
+    assign o_miss      = i_enable && !hit;
 
     //  memory request
     assign o_mem_enable = i_enable && (state == IDLE) && !hit;
@@ -90,7 +91,7 @@ module ica #(
 
         // output logic
         // read_data = memory[addr_idx][hit_index][(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH];
-        o_read_data = memory[addr_idx][hit_index][(addr_off +1) * 8 -1 -: REG_WIDTH];
+        o_read_data = hit ? memory[addr_idx][hit_index][(addr_off +1) * 8 -1 -: REG_WIDTH] : NOP;
     end
 
     always_comb begin : state_machine

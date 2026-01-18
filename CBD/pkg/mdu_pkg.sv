@@ -13,6 +13,7 @@ package mdu_pkg;
     } risk_mdu_e;
 
     typedef struct packed {
+        logic                       enable;
         risk_mdu_e                  operation;
     } mdu_control_t;
 

@@ -22,8 +22,9 @@ module dme #(
     input logic [REG_WIDTH -1 : 0]      i_write_data,
 
     output logic                        o_data_loaded,
-    output logic                        o_exeption,
-    output logic                        o_stall,
+    output logic                        o_tlb_miss,
+    output logic                        o_cache_miss,
+    output logic                        o_stb_full,
 
     // tlb write
     input logic                         i_write_enable,
@@ -51,13 +52,11 @@ module dme #(
 
     // stb
     mem_data_t                          stb_commit;
-    logic                               stb_stall;
     logic                               stb_hit;
     logic [REG_WIDTH -1 : 0]            stb_data;
 
     // cache
     logic                               cache_hit;
-    logic                               cache_stall;
     logic [REG_WIDTH -1 : 0]            cache_data;
 
     // logic
@@ -68,7 +67,6 @@ module dme #(
     assign store_commit = {              i_control.is_store, i_control.size, i_virtual_addr,        i_write_data,                     'x};
 
     assign o_data_loaded = stb_hit ? stb_data : cache_data;
-    assign o_stall = stb_stall || cache_stall;
 
     tlb #(
         .N_LINES(TLB_LINES),
@@ -83,7 +81,7 @@ module dme #(
         .i_physical_addr(i_physical_addr),
 
         .o_physical_addr(tlb_pa_addr),
-        .o_exeption(o_exeption)
+        .o_miss(o_tlb_miss)
     );
 
     stb #(
@@ -98,7 +96,7 @@ module dme #(
         .i_load_cache(i_control.is_load),
         .i_hit_cache(cache_hit),
 
-        .o_stall(stb_stall),
+        .o_full(o_stb_full),
 
         .o_commit(stb_commit),
 
@@ -124,7 +122,7 @@ module dme #(
         .i_store(stb_commit),
 
         .o_hit(cache_hit),
-        .o_stall(cache_stall),
+        .o_miss(o_cache_miss),
         .o_read_data(cache_data),
         
         .o_mem_enable(o_mem_enable),
