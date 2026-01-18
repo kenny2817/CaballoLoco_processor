@@ -175,6 +175,7 @@ module cbd #(
     // MUX
     assign i_pipe_A.rs1 = registers[select_rs1];
     assign i_pipe_A.rs2 = registers[select_rs2];
+    assign i_pipe_A.pc  = o_pipe_D.pc;
 
 // PIPE_A ===============================================================
 
@@ -222,8 +223,8 @@ module cbd #(
     );
 
     // MUX
-    // selects between ALU result and compare result depending on use_flag
-    assign i_pipe_M.alu_result = o_pipe_A.use_flag ? alu_flag_less_than : alu_result;
+    // selects between ALU result and compare result depending on use_flag and jalr pc +4
+    assign i_pipe_M.alu_result = o_pipe_A.jalr ? o_pipe_A.pc +1 : (o_pipe_A.use_flag ? alu_flag_less_than : alu_result) : alu_result;
 
     // Multiply Divide Unit
     mdu MDU (
@@ -247,9 +248,12 @@ module cbd #(
         .i_alu_flag_less_than(alu_flag_less_than),
 
         .o_branch(cmp_branch)
-    );  
+    );
 
-// PIPE_M ===============================================================
+    assign i_pipe_M.mem_control = o_pipe_A.mem_control;
+    assign i_pipe_M.wb_control  = o_pipe_A.wb_control;
+
+// PIPE_M ==============================================================
 // Pipeline register for Memory stage
 
     localparam cable_pipe_M_t flush_value_M = '0;
@@ -311,6 +315,8 @@ module cbd #(
         .i_mem_id_response(mem_response_id)
     );
 
+    assign i_pipe_W.wb_control = o_pipe_M.wb_control;
+
 // PIPE_W ===============================================================
 
     localparam cable_pipe_W_t flush_value_W = '0;
@@ -331,6 +337,8 @@ module cbd #(
 
     // MUX
     assign i_pipe_WC.mux_result = o_pipe_W.is_load ? o_pipe_W.mem_data : o_pipe_W.alu_result;
+    
+    assign i_pipe_WC.wb_control = o_pipe_W.wb_control;
 
 // PIPE_WC ==============================================================
 
