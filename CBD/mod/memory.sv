@@ -47,12 +47,17 @@ module memory #(
     logic [ID_WIDTH-1:0]                id    [STAGES]; //  id associated to stage
 
     buffer_results                      buffer [BUFFER_LENGTH]; //results
-    int                                 buffer_enter = 0;
+    int                                 buffer_next = 0;
     int                                 buffer_exit = 0;
 
     // pipeline shift
     int                                 i;
-    assign                              is_full = 0;
+
+    // check asynchronously if buffer is full
+    logic is_full;
+    always_comb begin
+            is_full = buffer[buffer_next].valid;
+    end
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -67,18 +72,16 @@ module memory #(
             o_mem_enable <= 1'b0;
             o_mem_data   <= '0;
             o_mem_id_response <= '0;
-            buffer_enter <= 0;
+            buffer_next <= 0;
             buffer_exit <= 0;
-            for (int k=0; k<BUFFER_LENGTH; k=k++) begin
+            for (int k=0; k<BUFFER_LENGTH; k++) begin
                 buffer[k].valid <= 1'b0;
-                buffer[k].data  <= '0;
-                buffer[k].id    <= '0;
             end
             o_mem_full <= 1'b0;
         end else if (is_full) begin
             //pipeline block
-            o_mem_full <= 1'b1;
-            o_mem_enable <= 1'b0;
+            o_mem_full <= buffer[buffer_next].valid && !write[STAGES-1];
+            o_mem_enable <= buffer[buffer_exit].valid;
         end else begin
             // shift pipeline from MSB down to 1
             for (i=STAGES-1; i>0; i=i-1) begin
@@ -98,36 +101,33 @@ module memory #(
 
 
             // handle MEM stage access combinationally on clock edge: perform writes and read
-            if (valid[STAGE - 1] && write[STAGE - 1]) begin 
+            if (valid[STAGES - 1] && write[STAGES - 1]) begin 
                     // write to memory
-                    mem[addr[STAGE - 1]] <= data[STAGE - 1];
+                    mem[addr[STAGES - 1]] <= data[STAGES - 1];
             end
 
-            // OUTPUT SOLO ALL'ULTIMO STAGE
-            if (valid[STAGES-1]) begin
-                if (!write[STAGES-1]) begin
-                    o_mem_data <= read_result; //updated from always comb
-                    o_mem_enable <= 1'b1;
-                end else begin
-                    buffer[buffer_next].data <= data[STAGES-1];
-                    buffer[buffer_next].id    <= id[STAGES - 1];
+            if (valid[STAGES-1] && !write[STAGES-1]) begin
+                if (!is_full) begin
+                    buffer[buffer_next].data <= read_result;
+                    buffer[buffer_next].id <= id[STAGES-1];
+                    buffer[buffer_next].valid <= 1'b1;
+                    buffer_next <= (buffer_next + 1) % BUFFER_LENGTH;
+                end 
+            end
 
-                    if (i_mem_ack) begin
-                        o_mem_data <= buffer[buffer_next].data;
-                        o_mem_id_response <= buffer[buffer_next].id;
-                        buffer[buffer_next].valid = 1'b0;
-                    end else begin
-                        buffer[buffer_next].valid = 1'b1;
-                    end
-                    o_mem_enable <= buffer[buffer_next].valid;
-                    
-                    buffer_next <= buffer_next + 1;   
-                end      
+            o_mem_enable <= buffer[buffer_exit].valid;
+            o_mem_full        <= is_full;
+
+            if (buffer[buffer_exit].valid && !write[STAGES-1]) begin
+                o_mem_data        <= buffer[buffer_exit].data;
+                o_mem_id_response <= buffer[buffer_exit].id;
+                if (i_mem_ack) begin
+                    buffer[buffer_exit].valid <= 1'b0;
+                    buffer_exit <= (buffer_exit + 1) % BUFFER_LENGTH;
+                end
             end else begin
-                o_mem_enable <= 1'b0;
                 o_mem_data   <= '0;
                 o_mem_id_response <= '0;
-                o_mem_full <= 1'b0;
             end
         end
     end
@@ -135,18 +135,11 @@ module memory #(
      // Combinational forwarding logic: compute read_result from mem or in-flight writes
     always_comb begin
         // check if STAGE-1 has a matching write that's about to be committed
-        if (valid[STAGE-1] && (addr[STAGE-1] == addr[STAGES-2])) begin
-            read_result = data[STAGE-1];
+        if (valid[STAGES-1] && (addr[STAGES-1] == addr[STAGES-2])) begin
+            read_result = data[STAGES-1];
+        end else begin
+            read_result = mem[addr[STAGES-1]];
         end
     end
-
-    // check asynchronously if buffer is full
-    always_comb begin
-        if (buffer[buffer_next].valid == 1) begin
-            is_full = 1'b1;
-        end else begin 
-            is_full = 1'b0;
-        end 
-    end
-    
+ 
 endmodule
