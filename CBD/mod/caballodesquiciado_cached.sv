@@ -38,6 +38,12 @@ module cbd #(
     logic [REG_WIDTH -1 : 0] alu_result;
     logic alu_flag_zero, alu_flag_less_than;
 
+    // memory
+    logic                   mem_enable, mem_write;
+    logic [PA_WIDTH   -1 : 0]     mem_addr; // address of data
+    logic [LINE_WIDTH -1 : 0]     mem_data; // actual data
+    logic [ID_WIDTH   -1 : 0]     mem_id;
+
 // PROGRAM COUNTER ======================================================
     reg_mono #(
         .DATA_WIDTH()
@@ -63,7 +69,7 @@ module cbd #(
         end
     end
 
-    // INSTRUCTION MEMORY
+    // Instruction MEmory
     ime IME #(
         .TLB_LINES(),
         .CACHE_SECTORS(),
@@ -113,7 +119,7 @@ module cbd #(
         .o_pipe(o_pipe_D)
     );
 
-    // INSTRUCTION DECODER
+    // Instruction Decoder
     ide IDE (
         .clk(clk),
         .rst(rst),
@@ -178,7 +184,7 @@ module cbd #(
                         (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rdf == select_rs2)) ? o_pipe_WC.mux_result :
                         o_pipe_A.rs2;
 
-    // ALU
+    // Arithmetic Logic Unit
     alu ALU (
         .clk(clk),
         .rst(rst),
@@ -195,9 +201,10 @@ module cbd #(
     );
 
     // MUX
+    // selects between ALU result and compare result depending on use_flag
     assign i_pipe_M.alu_result = o_pipe_A.use_flag ? alu_flag_less_than : alu_result;
 
-    // MDU
+    // Multiply Divide Unit
     mdu MDU (
         .clk(clk),
         .rst(rst),
@@ -209,7 +216,7 @@ module cbd #(
         .o_result(i_pipe_M.mdu_result)
     );
 
-    // CMP
+    // Comparator
     cmp CMP (
         .clk(clk),
         .rst(rst),
@@ -222,6 +229,7 @@ module cbd #(
     );  
 
 // PIPE_M ===============================================================
+// Pipeline register for Memory stage
     pipe #(
         .CABLE_T(cable_pipe_M_t)
     ) PIPE_M (
@@ -234,7 +242,7 @@ module cbd #(
         .o_pipe(o_pipe_M)
     );
 
-    // DATA MEMORY
+    // Data Memory Engine - Data Cache - TLB interface
     dme DME #(
         .TLB_LINES(),
         .CACHE_SECTORS(),
@@ -322,11 +330,35 @@ module cbd #(
         .i_data(mem_data_store),
         .i_data_write(mem_data_write),
 
-        .o_mem_addr(),
-        .o_mem_data(),
-        .o_mem_enable(),
-        .o_mem_write(),
+        .o_mem_addr(mem_addr),
+        .o_mem_data(mem_data),
+        .o_mem_enable(mem_enable),
+        .o_mem_write(mem_write),
         .o_mem_id(arb_id)
     );
+
+    memory #(
+        .PA_WIDTH(),
+        .LINE_WIDTH(),
+        .ID_WIDTH(),
+        .STAGES()
+    ) MEM (
+        .clk(clk),
+        .rst(rst),
+
+        .i_mem_enable(),
+        .i_mem_write(),
+        .i_mem_addr(),
+        .i_mem_data(),
+        .i_mem_id(arb_id),
+        .i_mem_ack(mem_data_ack || mem_instruction_ack)
+
+        //instruction ack?
+
+        .o_mem_enable(),
+        .o_mem_data(),
+        .o_mem_id_response()
+        .o_mem_full()        
+    )
 
 endmodule

@@ -1,9 +1,11 @@
+import mem_pkg::*;
 
 module memory #(
     parameter PA_WIDTH      = 8,
     parameter LINE_WIDTH    = 32,
     parameter ID_WIDTH      = 4,
-    parameter STAGES        = 5
+    parameter STAGES        = 5,
+    parameter BUFFER_LENGTH = 4
 ) (
     input logic                         clk,
     input logic                         rst,
@@ -14,26 +16,28 @@ module memory #(
     input logic [PA_WIDTH   -1 : 0]     i_mem_addr, // address of data
     input logic [LINE_WIDTH -1 : 0]     i_mem_data, // actual data
     input logic [ID_WIDTH   -1 : 0]     i_mem_id,
+    input logic                         i_mem_ack,
+
 
     // to cache
     output logic                        o_mem_enable,
     output logic [LINE_WIDTH    -1 : 0] o_mem_data,
-    output logic [ID_WIDTH      -1 : 0] o_mem_id_response
+    output logic [ID_WIDTH      -1 : 0] o_mem_id_response,
+    output logic                        o_mem_full //mem piena
 );
 
     // internal logic
-    localparam int DEPTH = 1 << PA_WIDTH;
-    localparam int MEM_STAGE = STAGES/2;
+    localparam int                      DEPTH = 1 << PA_WIDTH;
 
     // Memory access stage: choose a stage index where MEM access happens.
     // We choose stage k = 2 (middle) so we have stages before and after for updates and decodes (0 .. STAGES-1).
     
     // memory
-    logic [LINE_WIDTH-1:0] mem [DEPTH-1:0];
+    logic [LINE_WIDTH-1:0]              mem [DEPTH-1:0];
 
     // local read helper
-    logic [LINE_WIDTH-1:0] mem_read;
-    logic [LINE_WIDTH-1:0] read_result;
+    logic [LINE_WIDTH-1:0]              mem_read;
+    logic [LINE_WIDTH-1:0]              read_result;
 
     // pipeline registers (valid + fields)
     logic [STAGES-1:0]                  valid;          //  tracking of which pipeline elements have active/valid data
@@ -42,8 +46,13 @@ module memory #(
     logic                               write [STAGES]; //  1 = write stage, 0 = read stage
     logic [ID_WIDTH-1:0]                id    [STAGES]; //  id associated to stage
 
+    buffer_results                      buffer [BUFFER_LENGTH]; //results
+    int                                 buffer_enter = 0;
+    int                                 buffer_exit = 0;
+
     // pipeline shift
-    int i;
+    int                                 i;
+    assign                              is_full = 0;
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -58,6 +67,18 @@ module memory #(
             o_mem_enable <= 1'b0;
             o_mem_data   <= '0;
             o_mem_id_response <= '0;
+            buffer_enter <= 0;
+            buffer_exit <= 0;
+            for (int k=0; k<BUFFER_LENGTH; k=k++) begin
+                buffer[k].valid <= 1'b0;
+                buffer[k].data  <= '0;
+                buffer[k].id    <= '0;
+            end
+            o_mem_full <= 1'b0;
+        end else if (is_full) begin
+            //pipeline block
+            o_mem_full <= 1'b1;
+            o_mem_enable <= 1'b0;
         end else begin
             // shift pipeline from MSB down to 1
             for (i=STAGES-1; i>0; i=i-1) begin
@@ -77,49 +98,55 @@ module memory #(
 
 
             // handle MEM stage access combinationally on clock edge: perform writes and read
-            if (valid[MEM_STAGE - 1] && write[MEM_STAGE - 1]) begin // valid and it is a write
+            if (valid[STAGE - 1] && write[STAGE - 1]) begin 
                     // write to memory
-                    mem[addr[MEM_STAGE - 1]] <= data[MEM_STAGE - 1];
+                    mem[addr[STAGE - 1]] <= data[STAGE - 1];
             end
 
-            // produce outputs from last stage (stage STAGES-1)
-            if (valid[STAGES-2]) begin
-                o_mem_enable <= 1'b1;
-                // if the request was a read we must deliver the latest data.
-                if (!write[STAGES-2]) begin
-                    o_mem_data <= read_result;
+            // OUTPUT SOLO ALL'ULTIMO STAGE
+            if (valid[STAGES-1]) begin
+                if (!write[STAGES-1]) begin
+                    o_mem_data <= read_result; //updated from always comb
+                    o_mem_enable <= 1'b1;
                 end else begin
-                    // the response corresponds to a write command: optionally return written data
-                    o_mem_data <= data[STAGES-2];   // it can be also returned array of zero, but that could actually 
-                                                    // be the content of the memory
-                end
-                o_mem_id_response <= id[STAGES-2];
+                    buffer[buffer_next].data <= data[STAGES-1];
+                    buffer[buffer_next].id    <= id[STAGES - 1];
+
+                    if (i_mem_ack) begin
+                        o_mem_data <= buffer[buffer_next].data;
+                        o_mem_id_response <= buffer[buffer_next].id;
+                        buffer[buffer_next].valid = 1'b0;
+                    end else begin
+                        buffer[buffer_next].valid = 1'b1;
+                    end
+                    o_mem_enable <= buffer[buffer_next].valid;
+                    
+                    buffer_next <= buffer_next + 1;   
+                end      
             end else begin
                 o_mem_enable <= 1'b0;
                 o_mem_data   <= '0;
                 o_mem_id_response <= '0;
+                o_mem_full <= 1'b0;
             end
         end
     end
 
      // Combinational forwarding logic: compute read_result from mem or in-flight writes
     always_comb begin
-        // default: read from memory
-        read_result = mem[addr[STAGES-2]];
-        
-        // check for more recent writes in pipeline, that is forwarding
-        // by scanning from stage 0 up to STAGES-3 (all stages before the one producing output)
-        for (int j = 0; j < STAGES-2; j = j + 1) begin
-            if (valid[j] && write[j] && (addr[j] == addr[STAGES-2])) begin
-                read_result = data[j];
-                // we don't break because we want the OLDEST matching write (closest to commit)
-            end
+        // check if STAGE-1 has a matching write that's about to be committed
+        if (valid[STAGE-1] && (addr[STAGE-1] == addr[STAGES-2])) begin
+            read_result = data[STAGE-1];
         end
-        
-        // also check if MEM_STAGE-1 has a matching write that's about to be committed
-        if (valid[MEM_STAGE-1] && write[MEM_STAGE-1] && (addr[MEM_STAGE-1] == addr[STAGES-2])) begin
-            read_result = data[MEM_STAGE-1];
-        end
+    end
+
+    // check asynchronously if buffer is full
+    always_comb begin
+        if (buffer[buffer_next].valid == 1) begin
+            is_full = 1'b1;
+        end else begin 
+            is_full = 1'b0;
+        end 
     end
     
 endmodule
