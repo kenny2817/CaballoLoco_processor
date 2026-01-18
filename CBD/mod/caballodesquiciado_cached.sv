@@ -105,10 +105,10 @@ module cbd #(
         .o_mem_addr(mem_instruction_addr),
         .o_mem_ack(mem_instruction_ack),
 
-        .i_mem_enable(),
-        .i_mem_data(),
+        .i_mem_enable(mem_response_enable),
+        .i_mem_data(mem_response_data),
         .i_mem_id_request(arb_id),
-        .i_mem_id_response(),
+        .i_mem_id_response(mem_response_id),
         .i_mem_in_use(mem_data_enable)
     );
 
@@ -305,10 +305,10 @@ module cbd #(
         .o_mem_write(mem_data_write),
         .o_mem_ack(mem_data_ack),
 
-        .i_mem_enable(),
-        .i_mem_data(),
+        .i_mem_enable(mem_response_enable),
+        .i_mem_data(mem_response_data),
         .i_mem_id_request(arb_id),
-        .i_mem_id_response()
+        .i_mem_id_response(mem_response_id)
     );
 
 // PIPE_W ===============================================================
@@ -405,27 +405,25 @@ module cbd #(
     );
 
     memory #(
-        .PA_WIDTH(),
-        .LINE_WIDTH(),
-        .ID_WIDTH(),
-        .STAGES()
+        .PA_WIDTH(TODO),
+        .LINE_WIDTH(TODO),
+        .ID_WIDTH(TODO),
+        .STAGES(TODO)
     ) MEM (
         .clk(clk),
         .rst(rst),
 
-        .i_mem_enable(),
-        .i_mem_write(),
-        .i_mem_addr(),
-        .i_mem_data(),
+        .i_mem_enable(mem_enable),
+        .i_mem_write(mem_write),
+        .i_mem_addr(mem_addr),
+        .i_mem_data(mem_data),
         .i_mem_id(arb_id),
-        .i_mem_ack(mem_data_ack || mem_instruction_ack)
+        .i_mem_ack(mem_data_ack || mem_instruction_ack),
 
-        //instruction ack?
-
-        .o_mem_enable(),
-        .o_mem_data(),
-        .o_mem_id_response()
-        .o_mem_full()        
-    )
+        .o_mem_enable(mem_response_enable),
+        .o_mem_data(mem_response_data),
+        .o_mem_id_response(mem_response_id),
+        .o_mem_full(mem_full)        
+    );
 
 endmodule
