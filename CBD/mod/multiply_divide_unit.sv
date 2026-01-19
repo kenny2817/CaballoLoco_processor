@@ -1,8 +1,8 @@
 
-import mul_pkg::*;
+import mdu_pkg::*;
 
-module mul_div_unit #(
-    parameter REG_WIDTH,
+module mdu #(
+    parameter REG_WIDTH = 32,
     parameter int STAGES = 5
 )(
     input  logic                  clk,
@@ -13,7 +13,7 @@ module mul_div_unit #(
     input  logic [REG_WIDTH-1:0]  i_op1,      // First operand 
     input  logic [REG_WIDTH-1:0]  i_op2,      // Second operand
 
-    output logic [REG_WIDTH-1:0]  o_result    // result
+    output logic [REG_WIDTH-1:0]  o_result,   // result
     output logic                  o_cooking   // signal that the unit is busy cooking
 );
 

@@ -1,12 +1,12 @@
 
-typedef enum logic [1:0] { 
-    IDLE,                   // ready for miss
-    REQUEST                 // stall, request memory + save id
-} cache_state;
+typedef enum logic [0:0] { 
+    I_IDLE,                   // ready for miss
+    I_REQUEST                 // stall, request memory + save id
+} instruction_cache_state;
 
 
 module ica #(
-    parameter REG_WIDTH,                                    // register width
+    parameter REG_WIDTH = 32,                               // register width
     parameter N_SECTORS,                                    // number of sectors
     parameter N_LINES,                                      // number of lines per sector
     parameter N_BYTES,                                      // number of bytes per element
@@ -57,8 +57,8 @@ module ica #(
     logic [REG_WIDTH -1 : 0]                read_data;
     logic [INDEX_WIDTH -1 : 0]              rnd_latch;
 
-    cache_state                             state;
-    cache_state                             next_state;
+    instruction_cache_state                 state;
+    instruction_cache_state                 next_state;
 
     // assignments
     assign addr_tag     = i_pa_addr[PA_WIDTH -1 : OFFSET_WIDTH];
@@ -69,13 +69,13 @@ module ica #(
     assign o_miss      = !hit;
 
     //  memory request
-    assign o_mem_enable = (state == IDLE) && !hit;
+    assign o_mem_enable = (state == I_IDLE) && !hit;
     assign o_mem_addr   = {addr_tag, {OFFSET_WIDTH{1'b0}}};
 
     // memory response
     assign mem_hit      = i_mem_enable && mem_id == i_mem_id_response;
-    assign o_mem_ack    = (state == REQUEST) && mem_hit;
-    // assign o_read_data  = (state == REQUEST) ? i_mem_data[(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH] : read_data;
+    assign o_mem_ack    = (state == I_REQUEST) && mem_hit;
+    // assign o_read_data  = (state == I_REQUEST) ? i_mem_data[(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH] : read_data;
     
     always_comb begin : hit_logic
         // hit logic
@@ -96,14 +96,14 @@ module ica #(
     always_comb begin : state_machine
         next_state = state;
         case (state)
-            IDLE: begin
+            I_IDLE: begin
                 if (!hit && !i_mem_in_use) begin
-                    next_state = REQUEST;
+                    next_state = I_REQUEST;
                 end
             end
-            REQUEST: begin
+            I_REQUEST: begin
                 if (mem_hit) begin
-                    next_state = IDLE;
+                    next_state = I_IDLE;
                 end
             end
         endcase
@@ -116,15 +116,15 @@ module ica #(
                     valid_bit[i][j] <= 1'b0;
                 end
             end
-            state <= IDLE;
+            state <= I_IDLE;
         end else begin
             state <= next_state;
             case (state)
-                IDLE: begin
+                I_IDLE: begin
                     mem_id <= i_mem_id_request;
                     rnd_latch <= rnd;
                 end
-                REQUEST: begin
+                I_REQUEST: begin
                     tag         [addr_idx][rnd_latch] <= addr_tag;
                     valid_bit   [addr_idx][rnd_latch] <= 1'b1;
                     memory      [addr_idx][rnd_latch] <= i_mem_data;

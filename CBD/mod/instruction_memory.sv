@@ -29,7 +29,7 @@ module ime #(
     output logic                        o_mem_ack,
 
     input logic                         i_mem_enable,
-    input logic [LINE_WIDTH -1 : 0]     i_mem_data,
+    input logic [CACHE_BYTES*8 -1 : 0]  i_mem_data,
     input logic [ID_WIDTH -1 : 0]       i_mem_id_request,
     input logic [ID_WIDTH -1 : 0]       i_mem_id_response,
     input logic                         i_mem_in_use

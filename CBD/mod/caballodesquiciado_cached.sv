@@ -3,13 +3,22 @@ import pipes_pkg::*;
 module cbd #(
 ) (
     input logic clk,
-    input logic rst
+    input logic rst,
+    input logic rnd
 );
 
 // LOCAL PARAMETERS =====================================================
-    parameter int NUM_REG = 32;
-    parameter int REG_WIDTH = 32;
-    parameter int TODO = 4;
+    localparam int NUM_REG = 32;
+    localparam int REG_WIDTH = 32;
+    localparam int TLB_LINES = 2;
+    localparam int CACHE_SECTORS = 4;
+    localparam int CACHE_LINES = 1;
+    localparam int CACHE_BYTES = 16;
+    localparam int STB_LINES = 4;
+    localparam int VA_WIDTH = 32;
+    localparam int PA_WIDTH = 20;
+    localparam int ID_WIDTH = 2;
+    localparam int MEM_STAGES = 5;
 
 // CABLE MANAGEMENT =====================================================
 
@@ -36,18 +45,24 @@ module cbd #(
     logic                   mem_instruction_enable, mem_data_enable;
     logic [PA_WIDTH -1 : 0] mem_instruction_addr,   mem_data_addr;
     logic                   mem_instruction_ack,    mem_data_ack;
-    logic [LINE_WIDTH -1 : 0]                       mem_data_store;
+    logic [CACHE_BYTES*8 - 1 : 0]                   mem_data_store;
     logic                                           mem_data_write;
-    logic [ID_WIDTH -1 : 0] arb_id;
+    logic [ID_WIDTH -1 : 0]                         arb_id;
+    logic                                           mem_response_enable;
+    logic [CACHE_BYTES*8 - 1 : 0]                   mem_response_data;
+    logic [ID_WIDTH -1 : 0]                         mem_response_id;
 
     // alu
     logic [REG_WIDTH -1 : 0] alu_result;
     logic alu_flag_zero, alu_flag_less_than;
 
+    // mdu
+    logic [REG_WIDTH -1 : 0] mdu_result;
+
     // memory
     logic                   mem_enable, mem_write;
     logic [PA_WIDTH   -1 : 0]     mem_addr; // address of data
-    logic [LINE_WIDTH -1 : 0]     mem_data; // actual data
+    logic [CACHE_BYTES*8 - 1 : 0] mem_data; // actual data
     logic [ID_WIDTH   -1 : 0]     mem_id;
 
 // PROGRAM COUNTER ======================================================
@@ -65,11 +80,11 @@ module cbd #(
     // PC MANAGER
     always_comb begin
         if (cmp_branch) begin
-            pc = o_pipe_D.pc + i_pipe_A.alu_control.imm;
+            pc = o_pipe_D.pc + i_pipe_A.imm;
         end else if (o_pipe_A.jalr) begin
             pc = alu_result;
         end else if (ide_jal) begin
-            pc = i_pipe_D.pc + i_pipe_A.alu_control.imm;
+            pc = i_pipe_D.pc + i_pipe_A.imm;
         end else begin
             pc = i_pipe_D.pc +1;
         end
@@ -77,13 +92,13 @@ module cbd #(
 
     // INSTRUCTION MEMORY
     ime #(
-        .TLB_LINES(TODO),
-        .CACHE_SECTORS(TODO),
-        .CACHE_LINES(TODO),
-        .CACHE_BYTES(TODO),
-        .VA_WIDTH(TODO),
-        .PA_WIDTH(TODO),
-        .ID_WIDTH(TODO)
+        .TLB_LINES(TLB_LINES),
+        .CACHE_SECTORS(CACHE_SECTORS),
+        .CACHE_LINES(CACHE_LINES),
+        .CACHE_BYTES(CACHE_BYTES),
+        .VA_WIDTH(VA_WIDTH),
+        .PA_WIDTH(PA_WIDTH),
+        .ID_WIDTH(ID_WIDTH)
     ) IME (
         .clk(clk),
         .rst(rst),
@@ -96,8 +111,8 @@ module cbd #(
         .o_cache_miss(cache_miss_F),
 
         // tlb write
-        .i_write_enable(),
-        .i_physical_addr(),
+        .i_write_enable(TODO),
+        .i_physical_addr(TODO),
 
         // mem
         .o_mem_enable(mem_instruction_enable),
@@ -134,9 +149,6 @@ module cbd #(
 
     // Instruction Decoder
     ide IDE (
-        .clk(clk),
-        .rst(rst),
-
         .i_instruction(o_pipe_D.instruction),
 
         .o_alu_control(i_pipe_A.alu_control),
@@ -207,9 +219,6 @@ module cbd #(
 
     // Arithmetic Logic Unit
     alu ALU (
-        .clk(clk),
-        .rst(rst),
-
         .i_control(o_pipe_A.alu_control),
         .i_rs1(bypass_rs1), // bypass
         .i_rs2(bypass_rs2), // bypass
@@ -227,8 +236,8 @@ module cbd #(
         .rst(rst),
 
         .i_control(o_pipe_A.mdu_control),
-        .i_rs1(o_pipe_A.rs1),
-        .i_rs2(o_pipe_A.rs2),
+        .i_op1(o_pipe_A.rs1),
+        .i_op2(o_pipe_A.rs2),
 
         .o_result(mdu_result),
         .o_cooking(mdu_cooking)
@@ -236,9 +245,6 @@ module cbd #(
 
     // Comparator
     cmp CMP (
-        .clk(clk),
-        .rst(rst),
-
         .i_control(o_pipe_A.cmp_control),
         .i_alu_flag_zero(alu_flag_zero),
         .i_alu_flag_less_than(alu_flag_less_than),
@@ -249,14 +255,13 @@ module cbd #(
     // MUX
     // selects between ALU result and compare result depending on use_flag and jalr pc +4
     assign i_pipe_M.execution_result =  o_pipe_A.mdu_control.enable ? 
-                                        (o_pipe_A.jalr      ? o_pipe_A.pc +1        : mdu_result) : 
-                                        (o_pipe_A.use_flag  ? alu_flag_less_than    : alu_result);
+                                        (o_pipe_A.jalr      ? o_pipe_A.pc +1                        : mdu_result) : 
+                                        (o_pipe_A.use_flag  ? {31'h00000000, alu_flag_less_than}    : alu_result);
 
     assign i_pipe_M.mem_control = o_pipe_A.mem_control;
     assign i_pipe_M.wb_control  = o_pipe_A.wb_control;
 
-// PIPE_M ===============================================================
-
+// PIPE_M ==============================================================
     localparam cable_pipe_M_t flush_value_M = '0;
 
     pipe #(
@@ -276,22 +281,22 @@ module cbd #(
 
     // Data Memory Engine - Data Cache - TLB interface
     dme #(
-        .TLB_LINES(TODO),
-        .CACHE_SECTORS(TODO),
-        .CACHE_LINES(TODO),
-        .CACHE_BYTES(TODO),
-        .STB_LINES(TODO),
-        .REG_WIDTH(TODO),
-        .VA_WIDTH(TODO),
-        .PA_WIDTH(TODO),
-        .ID_WIDTH(TODO)
+        .TLB_LINES(TLB_LINES),
+        .CACHE_SECTORS(CACHE_SECTORS),
+        .CACHE_LINES(CACHE_LINES),
+        .CACHE_BYTES(CACHE_BYTES),
+        .STB_LINES(STB_LINES),
+        .REG_WIDTH(REG_WIDTH),
+        .VA_WIDTH(VA_WIDTH),
+        .PA_WIDTH(PA_WIDTH),
+        .ID_WIDTH(ID_WIDTH)
     ) DME (
         .clk(clk),
         .rst(rst),
         .rnd(rnd),
 
         .i_control(o_pipe_M.mem_control),
-        .i_virtual_addr(o_pipe_A.execution_result),
+        .i_virtual_addr(o_pipe_M.execution_result),
         .i_write_data(o_pipe_A.rs2),
 
         .o_data_loaded(i_pipe_W.mem_data),
@@ -300,12 +305,12 @@ module cbd #(
         .o_stb_full(stb_full_M),
 
         // tlb write
-        .i_write_enable(),
-        .i_physical_addr(),
+        .i_write_enable(TODO),
+        .i_physical_addr(TODO),
 
         // mem
         .o_mem_enable(mem_data_enable),
-        .o_mem_addr(mem_data_enable),
+        .o_mem_addr(mem_data_addr),
         .o_mem_data(mem_data_store),
         .o_mem_write(mem_data_write),
         .o_mem_ack(mem_data_ack),
@@ -389,7 +394,7 @@ module cbd #(
     assign branch_misprediction = (cmp_branch); // for now no branch prediction implemented
 
     // flush on branch misprediction | jalr | tlb miss or cache miss in F | bad instruction in D
-    assign flush_pipe_D   = (branch_misprediction || ipipe_A.jalr || tlb_miss_F || cache_miss_F);
+    assign flush_pipe_D   = (branch_misprediction || i_pipe_A.jalr || tlb_miss_F || cache_miss_F);
     assign flush_pipe_A   = (branch_misprediction || stall_load_bypass || bad_instruction);
     assign flush_pipe_M   = (0); // no flush in M
     assign flush_pipe_W   = (0); // no flush in W
@@ -398,9 +403,9 @@ module cbd #(
 // MEMORY ===============================================================
 
     arb #(
-        .PA_WIDTH(TODO),
-        .LINE_WIDTH(TODO),
-        .ID_WIDTH(TODO)
+        .PA_WIDTH(PA_WIDTH),
+        .LINE_WIDTH(CACHE_BYTES),
+        .ID_WIDTH(ID_WIDTH)
     ) ARB (
         .clk(clk),
         .rst(rst),
@@ -421,10 +426,10 @@ module cbd #(
     );
 
     memory #(
-        .PA_WIDTH(TODO),
-        .LINE_WIDTH(TODO),
-        .ID_WIDTH(TODO),
-        .STAGES(TODO)
+        .PA_WIDTH(PA_WIDTH),
+        .LINE_WIDTH(CACHE_BYTES),
+        .ID_WIDTH(ID_WIDTH),
+        .STAGES(MEM_STAGES)
     ) MEM (
         .clk(clk),
         .rst(rst),

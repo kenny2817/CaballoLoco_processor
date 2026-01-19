@@ -63,7 +63,7 @@ module dme #(
     logic                               enable;
     logic [VA_WIDTH -1 : 0]             virtual_addr;
 
-    assign load_commit  = {!o_exeption && i_control.is_load, i_control.size, i_virtual_addr, {(REG_WIDTH){1'b0}}, i_control.use_unsigned};
+    assign load_commit  = {!o_tlb_miss && i_control.is_load, i_control.size, i_virtual_addr, {(REG_WIDTH){1'b0}}, i_control.use_unsigned};
     assign store_commit = {              i_control.is_store, i_control.size, i_virtual_addr,        i_write_data,                     'x};
 
     assign o_data_loaded = stb_hit ? stb_data : cache_data;

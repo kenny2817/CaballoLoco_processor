@@ -57,7 +57,7 @@ dme: ${PKG_DIR}/cache_pkg.sv ${MODULES_DIR}/data_cache.sv ${MODULES_DIR}/transla
 mem: ${MODULES_DIR}/memory.sv ${TB_DIR}/mem_tb.sv
 	${VERILATOR_COMPILE}
 
-cbd: ${PKG_DIR}/* ${MODULES_DIR}/caballodesquiciado_cached.sv
+cbd: ${PKG_DIR}/* ${MODULES_DIR}/* ${TB_DIR}/cbd_tb.sv
 	${VERILATOR_COMPILE}
 
 clean:

@@ -11,12 +11,12 @@ module pipe #(
     input logic     flush,
 
     input CABLE_T   i_pipe,
-    output CABLE_T  o_pipe,
+    output CABLE_T  o_pipe
 );
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             o_pipe <= '0;
-        end else if() begin
+        end else if (flush) begin
             o_pipe <= FLUSH_VALUE;
         end else if (enable) begin
             o_pipe <= i_pipe;

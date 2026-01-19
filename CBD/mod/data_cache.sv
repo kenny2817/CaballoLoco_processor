@@ -2,14 +2,14 @@
 import cache_pkg::*;
 
 typedef enum logic [1:0] { 
-    IDLE,                   // ready for store and load
-    S_REQUEST,                 // wait mem miss, ready for load
-    L_REQUEST,                 // stall, wait load miss
-    BOTH_REQUEST                  // stall, wait load miss, store in background
-} cache_state;
+    D_IDLE,                   // ready for store and load
+    D_S_REQUEST,                 // wait mem miss, ready for load
+    D_L_REQUEST,                 // stall, wait load miss
+    D_BOTH_REQUEST                  // stall, wait load miss, store in background
+} data_cache_state;
 
 module dca #(
-    parameter REG_WIDTH,                                     // register width in bits
+    parameter REG_WIDTH = 32,                               // register width in bits
     parameter N_SECTORS,                                    // number of sectors
     parameter N_LINES,                                      // number of lines per sector
     parameter N_BYTES,                                      // number of bytes per line
@@ -80,8 +80,8 @@ module dca #(
     logic [7 : 0]                            byte_read;
 
 
-    cache_state                             state;
-    cache_state                             next_state;
+    data_cache_state                         state;
+    data_cache_state                         next_state;
 
     // tasks
         task automatic request_mem(
@@ -163,17 +163,17 @@ module dca #(
 
         if (i_load.use_unsigned) begin
             case (i_load.size)
-                SIZE_BYTE: o_read_data <= {24'b0, byte_read};
-                SIZE_HALF: o_read_data <= {16'b0, half_read};
-                SIZE_WORD: o_read_data <=         word_read ;
-                default:   o_read_data <=                'x ;
+                SIZE_BYTE: o_read_data = {24'b0, byte_read};
+                SIZE_HALF: o_read_data = {16'b0, half_read};
+                SIZE_WORD: o_read_data =         word_read ;
+                default:   o_read_data =                'x ;
             endcase
         end else begin
             case (i_load.size)
-                SIZE_BYTE: o_read_data <= {24'b0, {(byte_read[7])},  byte_read};
-                SIZE_HALF: o_read_data <= {16'b0, {(half_read[15])}, half_read};
-                SIZE_WORD: o_read_data <=                            word_read ;
-                default:   o_read_data <=                                   'x ;
+                SIZE_BYTE: o_read_data = {24'b0, {(byte_read[7])},  byte_read};
+                SIZE_HALF: o_read_data = {16'b0, {(half_read[15])}, half_read};
+                SIZE_WORD: o_read_data =                            word_read ;
+                default:   o_read_data =                                   'x ;
             endcase
         end
         // o_read_data = memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -: ELEMENT_WIDTH];
@@ -183,30 +183,30 @@ module dca #(
     always_comb begin : state_machine
         next_state = state;
         case (state)
-            IDLE: begin
+            D_IDLE: begin
                 if (!o_hit) begin
                     if (i_load.enable) begin
-                        next_state = L_REQUEST;
+                        next_state = D_L_REQUEST;
                     end else if (i_store.enable) begin
-                        next_state = S_REQUEST;
+                        next_state = D_S_REQUEST;
                     end
                 end
             end
-            S_REQUEST: begin
+            D_S_REQUEST: begin
                 if (o_hit && !i_load.enable) begin
-                    next_state = IDLE;
+                    next_state = D_IDLE;
                 end else if (!o_hit && i_load.enable) begin
-                    next_state = BOTH_REQUEST;
+                    next_state = D_BOTH_REQUEST;
                 end
             end
-            L_REQUEST: begin
+            D_L_REQUEST: begin
                 if (o_hit) begin
-                    next_state = IDLE;
+                    next_state = D_IDLE;
                 end
             end
-            BOTH_REQUEST: begin
+            D_BOTH_REQUEST: begin
                 if (o_hit) begin
-                    next_state = S_REQUEST;
+                    next_state = D_S_REQUEST;
                 end
             end
         endcase
@@ -220,7 +220,7 @@ module dca #(
                     dirty_bit[i][j] <= 1'b0;
                 end
             end
-            state <= IDLE;
+            state <= D_IDLE;
             o_mem_enable <= 1'b0;
             o_mem_ack <= 1'b0;
         end else begin
@@ -229,7 +229,7 @@ module dca #(
             o_mem_data <= 'x;
             state <= next_state;
             case (state)
-                IDLE: begin
+                D_IDLE: begin
                     if (!i_load.enable && i_store.enable && !o_hit || i_load.enable && !o_hit && !i_hit) begin
                         // store or load miss
                         request_mem(0);
@@ -238,7 +238,7 @@ module dca #(
                         store_hit();
                     end
                 end
-                S_REQUEST: begin
+                D_S_REQUEST: begin
                     if (i_load.enable && !o_hit && !i_hit) begin
                         // load miss
                         request_mem(1);
@@ -248,10 +248,10 @@ module dca #(
                         evict_dirty_try_get_mem(0, addr_store.index);
                     end
                 end
-                L_REQUEST: begin
+                D_L_REQUEST: begin
                     evict_dirty_try_get_mem(0, addr_load.index);
                 end
-                BOTH_REQUEST: begin
+                D_BOTH_REQUEST: begin
                     evict_dirty_try_get_mem(1, addr_load.index);
                     get_from_mem(0, addr_store.index);
                 end

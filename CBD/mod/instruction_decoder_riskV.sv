@@ -1,7 +1,6 @@
 import riscv_instr_pkg::*;
 import alu_pkg::*;
 import mdu_pkg::*;
-import mem_pkg::*;
 import cable_pkg::*;
 
 
@@ -13,7 +12,7 @@ module ide (
     output mdu_control_t    o_mdu_control,
     output cmp_control_t    o_cmp_control,
     output mem_control_t    o_mem_control,
-    output write_back_t     o_wb_control,
+    output wb_control_t     o_wb_control,
 
     output logic [4 : 0]    o_rs1,
     output logic [4 : 0]    o_rs2,
@@ -35,10 +34,10 @@ module ide (
             risk_alu_operand_selector_e op2_sel,
             logic                       use_unsigned
         );
-            o_alu_control.operation     = alu_operation;
+            o_alu_control.operation     = operation;
             o_alu_control.op1_sel       = op1_sel;
             o_alu_control.op2_sel       = op2_sel;
-            o_alu_control.use_unsigned  = alu_use_unsigned;
+            o_alu_control.use_unsigned  = use_unsigned;
         endtask
 
         task automatic set_mdu(
@@ -80,10 +79,10 @@ module ide (
         o_rs2 = decoded.rs2;
         o_imm = decoded.imm;
 
-        set_alu('x, 'x, 'x, 'x);
-        set_mdu(1'b0, 'x);
-        set_mem(1'b0, 1'b0, 'x, 'x);
-        set_cmp(1'b0, 'x, 'x);
+        set_alu(OP_ADD, OP_REG, OP_REG, 1'b0);
+        set_mdu(1'b0, OP_MUL);
+        set_mem(1'b0, 1'b0, SIZE_WORD, 1'b0);
+        set_cmp(1'b0, OP_BEQ, 1'b0);
 
         o_wb_control.is_write_back  = 1'b0;
         o_wb_control.rd             = decoded.rd;
@@ -187,6 +186,4 @@ module ide (
         end
     end
 
-
-    
 endmodule
