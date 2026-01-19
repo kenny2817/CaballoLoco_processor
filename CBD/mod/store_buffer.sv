@@ -42,7 +42,7 @@ module stb #(
         for (int i = 0; i < N_LINES; i++) begin
             if (buffer[i].enable && (buffer[i].address == i_store.address)) begin
                 o_hit = 1'b1;
-                load_index = i;
+                load_index = LINE_SELECT'(i);
             end
         end
 
@@ -66,7 +66,7 @@ module stb #(
                 oldest_line <= oldest_line + 1'b1;
             end
             if (i_store.enable && !buffer[newest_line].enable) begin // try to store in the buffer
-                buffer[newest_line] = i_store;
+                buffer[newest_line] <= i_store;
                 newest_line <= newest_line + 1'b1;
             end
         end

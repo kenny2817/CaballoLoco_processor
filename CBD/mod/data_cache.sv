@@ -2,22 +2,22 @@
 import cache_pkg::*;
 
 typedef enum logic [1:0] { 
-    D_IDLE,                   // ready for store and load
-    D_S_REQUEST,                 // wait mem miss, ready for load
-    D_L_REQUEST,                 // stall, wait load miss
-    D_BOTH_REQUEST                  // stall, wait load miss, store in background
+    D_IDLE,                                                         // ready for store and load
+    D_S_REQUEST,                                                    // wait mem miss, ready for load
+    D_L_REQUEST,                                                    // stall, wait load miss
+    D_BOTH_REQUEST                                                  // stall, wait load miss, store in background
 } data_cache_state;
 
 module dca #(
-    parameter REG_WIDTH = 32,                               // register width in bits
-    parameter N_SECTORS,                                    // number of sectors
-    parameter N_LINES,                                      // number of lines per sector
-    parameter N_BYTES,                                      // number of bytes per line
-    parameter PA_WIDTH,                                     // physical address width (this should be already the tag!)
-    parameter ID_WIDTH,                                     // id width for memory requests
+    parameter REG_WIDTH = 32,                                       // register width in bits
+    parameter N_SECTORS,                                            // number of sectors
+    parameter N_LINES,                                              // number of lines per sector
+    parameter N_BYTES,                                              // number of bytes per line
+    parameter PA_WIDTH,                                             // physical address width (this should be already the tag!)
+    parameter ID_WIDTH,                                             // id width for memory requests
     
-    localparam LINE_WIDTH    = N_BYTES * 8,              // line width in bits
-    localparam INDEX_WIDTH   = $clog2(N_LINES)              // index width in bits
+    localparam LINE_WIDTH    = N_BYTES * 8,                         // line width in bits
+    localparam INDEX_WIDTH   = (N_LINES > 1) ? $clog2(N_LINES) : 1  // index width in bits
 ) (
     input logic                             clk,
     input logic                             rst,
@@ -127,9 +127,10 @@ module dca #(
         task automatic store_hit(  
         );
             case(i_store.size)
-                SIZE_BYTE: memory[addr_store.index][hit_index][(addr_store.offset +1) * 32 -1 -:  8] <= i_store.data[ 7: 0];
-                SIZE_HALF: memory[addr_store.index][hit_index][(addr_store.offset +1) * 32 -1 -: 16] <= i_store.data[15: 0];
-                SIZE_WORD: memory[addr_store.index][hit_index][(addr_store.offset +1) * 32 -1 -: 32] <= i_store.data[31: 0];
+                SIZE_BYTE: memory[addr_store.index][hit_index][ (32'(addr_store.offset) +1) * 32 -1 -:  8] <= i_store.data[ 7: 0];
+                SIZE_HALF: memory[addr_store.index][hit_index][ (32'(addr_store.offset) +1) * 32 -1 -: 16] <= i_store.data[15: 0];
+                SIZE_WORD: memory[addr_store.index][hit_index][ (32'(addr_store.offset) +1) * 32 -1 -: 32] <= i_store.data[31: 0];
+                default:   memory[addr_store.index][hit_index][ (32'(addr_store.offset) +1) * 32 -1 -: 32] <= i_store.data[31: 0]; // default to word
             endcase
             dirty_bit[addr_store.index][hit_index] <= 1'b1;
         endtask
@@ -151,15 +152,15 @@ module dca #(
         for (int i = 0; i < N_LINES; i++) begin
             if (valid_bit[addr_data.index][i] && (tag[addr_data.index][i] == addr_tag)) begin
                 o_hit = 1'b1;
-                hit_index = i;
+                hit_index = INDEX_WIDTH'(i);
             end
         end
 
         // read data logic
         line_read = memory[addr_data.index][hit_index];
-        word_read = line_read[(addr_data.offset +1) * 32 -1 -: 32];
-        half_read = line_read[(addr_data.offset +1) * 16 -1 -: 16];
-        byte_read = line_read[(addr_data.offset +1) *  8 -1 -:  8];
+        word_read = line_read[ (32'(addr_data.offset) + 1) * 32 - 1 -: 32 ];
+        half_read = line_read[ (32'(addr_data.offset) + 1) * 16 - 1 -: 16 ];
+        byte_read = line_read[ (32'(addr_data.offset) + 1) *  8 - 1 -:  8 ];
 
         if (i_load.use_unsigned) begin
             case (i_load.size)
@@ -170,10 +171,10 @@ module dca #(
             endcase
         end else begin
             case (i_load.size)
-                SIZE_BYTE: o_read_data = {24'b0, {(byte_read[7])},  byte_read};
-                SIZE_HALF: o_read_data = {16'b0, {(half_read[15])}, half_read};
-                SIZE_WORD: o_read_data =                            word_read ;
-                default:   o_read_data =                                   'x ;
+                SIZE_BYTE: o_read_data = { {24{byte_read[7]}},  byte_read }; 
+                SIZE_HALF: o_read_data = { {16{half_read[15]}}, half_read };
+                SIZE_WORD: o_read_data =                        word_read  ;
+                default:   o_read_data =                               'x  ;
             endcase
         end
         // o_read_data = memory[addr_data.index][hit_index][(addr_data.offset +1) * 8 -1 -: ELEMENT_WIDTH];

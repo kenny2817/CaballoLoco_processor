@@ -5,17 +5,19 @@ module cbd_tb;
 // CLOCK AND RESET ======================================================
     localparam CLK_PERIOD = 10; // 100 MHz
     
-    logic clk;
-    logic rst;
+    logic         clk;
+    logic         rst;
+    logic [0 : 0] rnd;
 
 // DUT ==================================================================
     cbd dut (
         .clk(clk),
-        .rst(rst)
+        .rst(rst),
+        .rnd(rnd)
     );
 
 // CLOCK GENERATION =====================================================
-    always #(CLK_PERIOD / 2) clk = ~clk;
+    always #(CLK_PERIOD / 2) clk <= ~clk;
 
 // MAIN TEST SEQUENCE ===================================================
     initial begin
@@ -28,6 +30,7 @@ module cbd_tb;
         // Initial values
         clk = 0;
         rst = 1;
+        rnd = 0;
 
         // Apply reset
         repeat (5) @(posedge clk);

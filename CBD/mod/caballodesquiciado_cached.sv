@@ -2,9 +2,9 @@ import pipes_pkg::*;
 
 module cbd #(
 ) (
-    input logic clk,
-    input logic rst,
-    input logic rnd
+    input logic         clk,
+    input logic         rst,
+    input logic [0 : 0] rnd
 );
 
 // LOCAL PARAMETERS =====================================================
@@ -96,6 +96,7 @@ module cbd #(
         .CACHE_SECTORS(CACHE_SECTORS),
         .CACHE_LINES(CACHE_LINES),
         .CACHE_BYTES(CACHE_BYTES),
+        .REG_WIDTH(REG_WIDTH),
         .VA_WIDTH(VA_WIDTH),
         .PA_WIDTH(PA_WIDTH),
         .ID_WIDTH(ID_WIDTH)
@@ -258,6 +259,7 @@ module cbd #(
                                         (o_pipe_A.jalr      ? o_pipe_A.pc +1                        : mdu_result) : 
                                         (o_pipe_A.use_flag  ? {31'h00000000, alu_flag_less_than}    : alu_result);
 
+    assign i_pipe_M.rs2 = bypass_rs2; // pass rs2 for store operations
     assign i_pipe_M.mem_control = o_pipe_A.mem_control;
     assign i_pipe_M.wb_control  = o_pipe_A.wb_control;
 
@@ -301,7 +303,7 @@ module cbd #(
 
         .o_data_loaded(i_pipe_W.mem_data),
         .o_tlb_miss(tlb_miss_M),
-        .o_cache_miss(tlb_miss_M),
+        .o_cache_miss(cache_miss_M),
         .o_stb_full(stb_full_M),
 
         // tlb write
@@ -404,7 +406,7 @@ module cbd #(
 
     arb #(
         .PA_WIDTH(PA_WIDTH),
-        .LINE_WIDTH(CACHE_BYTES),
+        .LINE_BYTES(CACHE_BYTES),
         .ID_WIDTH(ID_WIDTH)
     ) ARB (
         .clk(clk),
@@ -427,7 +429,7 @@ module cbd #(
 
     memory #(
         .PA_WIDTH(PA_WIDTH),
-        .LINE_WIDTH(CACHE_BYTES),
+        .LINE_BYTES(CACHE_BYTES),
         .ID_WIDTH(ID_WIDTH),
         .STAGES(MEM_STAGES)
     ) MEM (

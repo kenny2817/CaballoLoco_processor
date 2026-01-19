@@ -86,7 +86,7 @@ module ide (
 
         o_wb_control.is_write_back  = 1'b0;
         o_wb_control.rd             = decoded.rd;
-        o_jal                      = 1'b0;
+        o_jal                       = 1'b0;
         o_use_flag                  = 1'b0;
 
         o_bad_instruction          = decoded.valid;
@@ -96,7 +96,6 @@ module ide (
                 FMT_R: begin
                     o_wb_control.is_write_back  = 1'b1;
                     case (decoded.instr_type)
-
                         INSTR_ADD:      set_alu(OP_ADD, OP_REG, OP_REG, 'x  );
                         INSTR_SUB:      set_alu(OP_SUB, OP_REG, OP_REG, 'x  );
                         INSTR_XOR:      set_alu(OP_XOR, OP_REG, OP_REG, 'x  );
@@ -116,6 +115,8 @@ module ide (
                         INSTR_DIVU:     set_mdu(1'b1, OP_DIVU  );
                         INSTR_REM:      set_mdu(1'b1, OP_REM   );
                         INSTR_REMU:     set_mdu(1'b1, OP_REMU  );
+
+                        default: ; // do nothing
                     endcase
                 end 
                 FMT_I: begin
@@ -144,6 +145,8 @@ module ide (
 
                         // INSTR_ECALL: 
                         // INSTR_EBREAK: // no idea of how to manage them
+
+                        default: ; // do nothing
                     endcase
                 end
                 FMT_S: begin
@@ -151,6 +154,8 @@ module ide (
                         INSTR_SB:       set_mem(1'b0, 1'b1, SIZE_BYTE, 1'b0);
                         INSTR_SH:       set_mem(1'b0, 1'b1, SIZE_HALF, 1'b0);
                         INSTR_SW:       set_mem(1'b0, 1'b1, SIZE_WORD, 1'b0);
+
+                        default: ; // do nothing
                     endcase
                 end
                 FMT_B: begin
@@ -161,6 +166,8 @@ module ide (
                         INSTR_BGE:      set_cmp(1'b1, OP_BGE, 1'b0);
                         INSTR_BLTU:     set_cmp(1'b1, OP_BLT, 1'b1);
                         INSTR_BGEU:     set_cmp(1'b1, OP_BGE, 1'b1);
+
+                        default: ; // do nothing
                     endcase
                 end
                 FMT_U: begin
@@ -169,11 +176,15 @@ module ide (
                     case (decoded.instr_type)
                         INSTR_LUI:      set_alu(OP_ADD, OP_REG, OP_IMM, 'x  );
                         INSTR_AUIPC:    set_alu(OP_ADD, OP_REG, OP_IMM, 'x  );
+
+                        default: ; // do nothing
                     endcase
                 end
                 FMT_J: begin
                     case (decoded.instr_type)
                         INSTR_JAL: o_jal = 1'b1;
+
+                        default: ; // do nothing
                     endcase
                 end
                 FMT_UNKNOWN: begin

@@ -75,7 +75,7 @@ module alu #(
         op_is_sub = (i_control.operation == OP_SUB);
         op2verted = op_is_sub ? ~alu_op2 : alu_op2;
         // REG_WIDTH +1 bit adder to capture the carry-out
-        adder_result_ext = alu_op1 + op2verted + op_is_sub;
+        adder_result_ext = alu_op1 + op2verted + 33'(op_is_sub);
         adder_result = adder_result_ext[REG_WIDTH-1:0];
 
         // logic

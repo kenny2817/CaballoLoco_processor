@@ -4,10 +4,12 @@ module ime #(
     parameter CACHE_SECTORS,
     parameter CACHE_LINES,
     parameter CACHE_BYTES,
+    parameter REG_WIDTH,
     parameter VA_WIDTH, 
     parameter PA_WIDTH,
     parameter ID_WIDTH,
-    localparam INDEX_WIDTH   = $clog2(CACHE_LINES)
+    localparam INDEX_WIDTH   = (CACHE_LINES > 1) ? $clog2(CACHE_LINES) : 1,
+    localparam LINE_WIDTH    = CACHE_BYTES * 8
 ) (
     input logic                         clk,
     input logic                         rst,
@@ -15,7 +17,7 @@ module ime #(
 
     input logic [VA_WIDTH -1 : 0]       i_virtual_addr,
 
-    output logic [CACHE_BYTES*8 -1 : 0] o_data_loaded,
+    output logic [REG_WIDTH -1 : 0]    o_data_loaded,
     output logic                        o_tlb_miss,
     output logic                        o_cache_miss,
 
@@ -29,7 +31,7 @@ module ime #(
     output logic                        o_mem_ack,
 
     input logic                         i_mem_enable,
-    input logic [CACHE_BYTES*8 -1 : 0]  i_mem_data,
+    input logic [LINE_WIDTH -1 : 0]     i_mem_data,
     input logic [ID_WIDTH -1 : 0]       i_mem_id_request,
     input logic [ID_WIDTH -1 : 0]       i_mem_id_response,
     input logic                         i_mem_in_use
@@ -69,6 +71,7 @@ module ime #(
         .i_pa_addr(tlb_pa_addr),
 
         .o_miss(o_cache_miss),
+        .o_read_data(o_data_loaded),
 
         .o_mem_enable(o_mem_enable),
         .o_mem_addr(o_mem_addr),

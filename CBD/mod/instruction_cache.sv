@@ -6,16 +6,16 @@ typedef enum logic [0:0] {
 
 
 module ica #(
-    parameter REG_WIDTH = 32,                               // register width
-    parameter N_SECTORS,                                    // number of sectors
-    parameter N_LINES,                                      // number of lines per sector
-    parameter N_BYTES,                                      // number of bytes per element
-    parameter VA_WIDTH,                                     // virtual address width
-    parameter PA_WIDTH,                                     // physical address width (this should be already the tag!)
-    parameter ID_WIDTH,                                     // memory id width
+    parameter REG_WIDTH = 32,                                       // register width
+    parameter N_SECTORS,                                            // number of sectors
+    parameter N_LINES,                                              // number of lines per sector
+    parameter N_BYTES,                                              // number of bytes per element
+    parameter VA_WIDTH,                                             // virtual address width
+    parameter PA_WIDTH,                                             // physical address width (this should be already the tag!)
+    parameter ID_WIDTH,                                             // memory id width
     
-    localparam LINE_WIDTH = N_BYTES * 8,                    // line width in bits
-    localparam INDEX_WIDTH   = $clog2(N_LINES)              // index width in bits
+    localparam LINE_WIDTH = N_BYTES * 8,                            // line width in bits
+    localparam INDEX_WIDTH   = (N_LINES > 1) ? $clog2(N_LINES) : 1  // index width in bits
 ) (
     input logic                             clk,
     input logic                             rst,
@@ -25,7 +25,7 @@ module ica #(
     input logic [PA_WIDTH -1 : 0]           i_pa_addr,
 
     output logic                            o_miss,
-    output logic [31 : 0]                   o_read_data,
+    output logic [REG_WIDTH -1 : 0]         o_read_data,
 
     // mem  
     output logic                            o_mem_enable,
@@ -33,7 +33,7 @@ module ica #(
     output logic                            o_mem_ack,
 
     input logic                             i_mem_enable,
-    input logic [REG_WIDTH -1 : 0]          i_mem_data,
+    input logic [LINE_WIDTH -1 : 0]         i_mem_data,
     input logic [ID_WIDTH -1 : 0]           i_mem_id_request,
     input logic [ID_WIDTH -1 : 0]           i_mem_id_response,
     input logic                             i_mem_in_use  // intra caches ack
@@ -54,7 +54,6 @@ module ica #(
     logic [ID_WIDTH -1 : 0]                 mem_id;
     logic                                   hit;
     logic                                   mem_hit;
-    logic [REG_WIDTH -1 : 0]                read_data;
     logic [INDEX_WIDTH -1 : 0]              rnd_latch;
 
     instruction_cache_state                 state;
@@ -75,7 +74,6 @@ module ica #(
     // memory response
     assign mem_hit      = i_mem_enable && mem_id == i_mem_id_response;
     assign o_mem_ack    = (state == I_REQUEST) && mem_hit;
-    // assign o_read_data  = (state == I_REQUEST) ? i_mem_data[(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH] : read_data;
     
     always_comb begin : hit_logic
         // hit logic
@@ -84,12 +82,11 @@ module ica #(
         for (int i = 0; i < N_LINES; i++) begin
             if (valid_bit[addr_idx][i] && (tag[addr_idx][i] == addr_tag)) begin
                 hit = 1'b1;
-                hit_index = i;
+                hit_index = INDEX_WIDTH'(i);
             end
         end
 
         // output logic
-        // read_data = memory[addr_idx][hit_index][(addr_off +1) * ELEMENT_WIDTH -1 -: ELEMENT_WIDTH];
         o_read_data = hit ? memory[addr_idx][hit_index][(addr_off +1) * 8 -1 -: REG_WIDTH] : NOP;
     end
 

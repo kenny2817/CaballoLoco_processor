@@ -10,7 +10,7 @@ module dme #(
     parameter VA_WIDTH, 
     parameter PA_WIDTH,
     parameter ID_WIDTH,
-    localparam INDEX_WIDTH   = $clog2(CACHE_LINES),
+    localparam INDEX_WIDTH   = (CACHE_LINES > 1) ? $clog2(CACHE_LINES) : 1,
     localparam LINE_WIDTH    = CACHE_BYTES * 8
 ) (
     input logic                         clk,
@@ -21,7 +21,7 @@ module dme #(
     input logic [VA_WIDTH -1 : 0]       i_virtual_addr,
     input logic [REG_WIDTH -1 : 0]      i_write_data,
 
-    output logic                        o_data_loaded,
+    output logic [REG_WIDTH -1 : 0]     o_data_loaded,
     output logic                        o_tlb_miss,
     output logic                        o_cache_miss,
     output logic                        o_stb_full,
@@ -33,7 +33,7 @@ module dme #(
     // memory
     output logic                        o_mem_enable,
     output logic [PA_WIDTH -1 : 0]      o_mem_addr,
-    output logic [REG_WIDTH -1 : 0]     o_mem_data,
+    output logic [LINE_WIDTH -1 : 0]    o_mem_data,
     output logic                        o_mem_write,
     output logic                        o_mem_ack,
 
@@ -61,7 +61,6 @@ module dme #(
 
     // logic
     logic                               enable;
-    logic [VA_WIDTH -1 : 0]             virtual_addr;
 
     assign load_commit  = {!o_tlb_miss && i_control.is_load, i_control.size, i_virtual_addr, {(REG_WIDTH){1'b0}}, i_control.use_unsigned};
     assign store_commit = {              i_control.is_store, i_control.size, i_virtual_addr,        i_write_data,                     'x};
@@ -77,7 +76,7 @@ module dme #(
         .rst(rst),
 
         .i_enable(i_write_enable),
-        .i_virtual_addr(virtual_addr), // both write and read
+        .i_virtual_addr(i_virtual_addr), // both write and read
         .i_physical_addr(i_physical_addr),
 
         .o_physical_addr(tlb_pa_addr),
