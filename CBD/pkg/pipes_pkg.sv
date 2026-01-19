@@ -31,15 +31,14 @@ package pipes_pkg;
     // MEMORY STAGE
     typedef struct packed {
         logic [REG_WIDTH-1 : 0] rs2;
-        logic [REG_WIDTH-1 : 0] alu_result;
-        logic [REG_WIDTH-1 : 0] mdu_result;
+        logic [REG_WIDTH-1 : 0] execution_result;
         mem_control_t           mem_control;
         wb_control_t            wb_control;
     } cable_pipe_M_t;
     
     // WRITE BACK STAGE
     typedef struct packed {
-        logic [REG_WIDTH-1 : 0] alu_result;
+        logic [REG_WIDTH-1 : 0] execution_result;
         logic [REG_WIDTH-1 : 0] mem_data;
         logic                   is_load;
         wb_control_t            wb_control;

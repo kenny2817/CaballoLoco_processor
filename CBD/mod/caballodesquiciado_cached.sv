@@ -89,12 +89,11 @@ module cbd #(
         .rst(rst),
         .rnd(rnd),
 
-        .i_enable(),
         .i_virtual_addr(i_pipe_D.pc),
 
         .o_data_loaded(i_pipe_D.instruction),
-        .o_tlb_miss(tlb_miss_D),
-        .o_cache_miss(cache_miss_D),
+        .o_tlb_miss(tlb_miss_F),
+        .o_cache_miss(cache_miss_F),
 
         // tlb write
         .i_write_enable(),
@@ -166,8 +165,8 @@ module cbd #(
         .rst(rst),
 
         .i_write_enable(o_pipe_W.wb_control.is_write_back),
-        .i_write_select(o_pipe_W.wb_control.rdf),
-        .i_write_data(),
+        .i_write_select(o_pipe_W.wb_control.rd),
+        .i_write_data(i_pipe_WC.mux_result),
 
         .o_read_data(registers)
     );
@@ -197,13 +196,13 @@ module cbd #(
 
     // BYPASS
     logic [REG_WIDTH -1 : 0] bypass_rs1, bypass_rs2;
-    assign bypass_rs1 = (o_pipe_M.wb_control.is_write_back && (o_pipe_M.wb_control.rdf == select_rs1)) ? o_pipe_M.alu_result :
-                        (o_pipe_W.wb_control.is_write_back && (o_pipe_W.wb_control.rdf == select_rs1)) ? o_pipe_W.alu_result :
-                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rdf == select_rs1)) ? o_pipe_WC.mux_result :
+    assign bypass_rs1 = (o_pipe_M.wb_control.is_write_back  && (o_pipe_M.wb_control.rd  == select_rs1)) ? o_pipe_M.execution_result :
+                        (o_pipe_W.wb_control.is_write_back  && (o_pipe_W.wb_control.rd  == select_rs1)) ? o_pipe_W.execution_result :
+                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rd == select_rs1)) ? o_pipe_WC.mux_result      :
                         o_pipe_A.rs1;
-    assign bypass_rs2 = (o_pipe_M.wb_control.is_write_back && (o_pipe_M.wb_control.rdf == select_rs2)) ? o_pipe_M.alu_result :
-                        (o_pipe_W.wb_control.is_write_back && (o_pipe_W.wb_control.rdf == select_rs2)) ? o_pipe_W.alu_result :
-                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rdf == select_rs2)) ? o_pipe_WC.mux_result :
+    assign bypass_rs2 = (o_pipe_M.wb_control.is_write_back  && (o_pipe_M.wb_control.rd  == select_rs2)) ? o_pipe_M.execution_result :
+                        (o_pipe_W.wb_control.is_write_back  && (o_pipe_W.wb_control.rd  == select_rs2)) ? o_pipe_W.execution_result :
+                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rd == select_rs2)) ? o_pipe_WC.mux_result      :
                         o_pipe_A.rs2;
 
     // Arithmetic Logic Unit
@@ -222,10 +221,6 @@ module cbd #(
         .o_less_than(alu_flag_less_than)
     );
 
-    // MUX
-    // selects between ALU result and compare result depending on use_flag and jalr pc +4
-    assign i_pipe_M.alu_result = o_pipe_A.jalr ? o_pipe_A.pc +1 : (o_pipe_A.use_flag ? alu_flag_less_than : alu_result) : alu_result;
-
     // Multiply Divide Unit
     mdu MDU (
         .clk(clk),
@@ -235,7 +230,8 @@ module cbd #(
         .i_rs1(o_pipe_A.rs1),
         .i_rs2(o_pipe_A.rs2),
 
-        .o_result(i_pipe_M.mdu_result)
+        .o_result(mdu_result),
+        .o_cooking(mdu_cooking)
     );
 
     // Comparator
@@ -250,11 +246,16 @@ module cbd #(
         .o_branch(cmp_branch)
     );
 
+    // MUX
+    // selects between ALU result and compare result depending on use_flag and jalr pc +4
+    assign i_pipe_M.execution_result =  o_pipe_A.mdu_control.enable ? 
+                                        (o_pipe_A.jalr      ? o_pipe_A.pc +1        : mdu_result) : 
+                                        (o_pipe_A.use_flag  ? alu_flag_less_than    : alu_result);
+
     assign i_pipe_M.mem_control = o_pipe_A.mem_control;
     assign i_pipe_M.wb_control  = o_pipe_A.wb_control;
 
-// PIPE_M ==============================================================
-// Pipeline register for Memory stage
+// PIPE_M ===============================================================
 
     localparam cable_pipe_M_t flush_value_M = '0;
 
@@ -290,7 +291,7 @@ module cbd #(
         .rnd(rnd),
 
         .i_control(o_pipe_M.mem_control),
-        .i_virtual_addr(o_pipe_A.alu_result),
+        .i_virtual_addr(o_pipe_A.execution_result),
         .i_write_data(o_pipe_A.rs2),
 
         .o_data_loaded(i_pipe_W.mem_data),
@@ -315,7 +316,9 @@ module cbd #(
         .i_mem_id_response(mem_response_id)
     );
 
-    assign i_pipe_W.wb_control = o_pipe_M.wb_control;
+    assign i_pipe_W.execution_result    = o_pipe_M.execution_result;
+    assign i_pipe_W.is_load             = o_pipe_M.mem_control.is_load;
+    assign i_pipe_W.wb_control          = o_pipe_M.wb_control;
 
 // PIPE_W ===============================================================
 
@@ -336,7 +339,7 @@ module cbd #(
     );
 
     // MUX
-    assign i_pipe_WC.mux_result = o_pipe_W.is_load ? o_pipe_W.mem_data : o_pipe_W.alu_result;
+    assign i_pipe_WC.mux_result = o_pipe_W.is_load ? o_pipe_W.mem_data : o_pipe_W.execution_result;
     
     assign i_pipe_WC.wb_control = o_pipe_W.wb_control;
 
@@ -360,14 +363,18 @@ module cbd #(
 
 // HAZARD UNIT ==========================================================
     
-    logic tlb_miss_D, cache_miss_D;
+    logic tlb_miss_F, cache_miss_F;
     logic tlb_miss_M, cache_miss_M, stb_full_M;
     logic mem_full;
     logic bad_instruction;
+    logic mdu_cooking;
 
     // STALL
     logic stall_pipeline, stall_load_bypass;
-    assign stall_pipeline = mem_full || tlb_miss_M || cache_miss_M || stb_full_M;
+
+    // full stall -> memory is overloaded | memory miss (tlb or cache) in M | store buffer full in M | mdu is cooking
+    assign stall_pipeline = mem_full || tlb_miss_M || cache_miss_M || stb_full_M || mdu_cooking;
+    // FD stall -> load-use hazard
     assign stall_load_bypass = o_pipe_A.mem_control.is_load && ((o_pipe_A.wb_control.rd == select_rs1) || (o_pipe_A.wb_control.rd == select_rs2));
 
     assign enable_pipe_F  = !(stall_pipeline || stall_load_bypass);
@@ -381,7 +388,8 @@ module cbd #(
     logic branch_misprediction;
     assign branch_misprediction = (cmp_branch); // for now no branch prediction implemented
 
-    assign flush_pipe_D   = (branch_misprediction || ipipe_A.jalr);
+    // flush on branch misprediction | jalr | tlb miss or cache miss in F | bad instruction in D
+    assign flush_pipe_D   = (branch_misprediction || ipipe_A.jalr || tlb_miss_F || cache_miss_F);
     assign flush_pipe_A   = (branch_misprediction || stall_load_bypass || bad_instruction);
     assign flush_pipe_M   = (0); // no flush in M
     assign flush_pipe_W   = (0); // no flush in W

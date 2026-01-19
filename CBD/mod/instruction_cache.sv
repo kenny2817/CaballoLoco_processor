@@ -21,7 +21,6 @@ module ica #(
     input logic                             rst,
     input logic [INDEX_WIDTH -1 : 0]        rnd,
 
-    input logic                             i_enable,
     input logic [VA_WIDTH -1 : 0]           i_va_addr,
     input logic [PA_WIDTH -1 : 0]           i_pa_addr,
 
@@ -66,11 +65,11 @@ module ica #(
     assign addr_idx     = i_va_addr[SECTOR_WIDTH + OFFSET_WIDTH -1 : OFFSET_WIDTH];
     assign addr_off     = {i_va_addr[OFFSET_WIDTH -1 : 2], 2'd0}; // word aligned
 
-    // assign o_miss      = i_enable && !hit && !mem_hit;
-    assign o_miss      = i_enable && !hit;
+    // assign o_miss      = !hit && !mem_hit;
+    assign o_miss      = !hit;
 
     //  memory request
-    assign o_mem_enable = i_enable && (state == IDLE) && !hit;
+    assign o_mem_enable = (state == IDLE) && !hit;
     assign o_mem_addr   = {addr_tag, {OFFSET_WIDTH{1'b0}}};
 
     // memory response
@@ -96,20 +95,18 @@ module ica #(
 
     always_comb begin : state_machine
         next_state = state;
-        if (i_enable) begin
-            case (state)
-                IDLE: begin
-                    if (!hit && !i_mem_in_use) begin
-                        next_state = REQUEST;
-                    end
+        case (state)
+            IDLE: begin
+                if (!hit && !i_mem_in_use) begin
+                    next_state = REQUEST;
                 end
-                REQUEST: begin
-                    if (mem_hit) begin
-                        next_state = IDLE;
-                    end
+            end
+            REQUEST: begin
+                if (mem_hit) begin
+                    next_state = IDLE;
                 end
-            endcase
-        end
+            end
+        endcase
     end
 
     always_ff @( posedge clk or posedge rst) begin : control_flow
@@ -120,7 +117,7 @@ module ica #(
                 end
             end
             state <= IDLE;
-        end else if (i_enable) begin
+        end else begin
             state <= next_state;
             case (state)
                 IDLE: begin

@@ -13,7 +13,6 @@ module ime #(
     input logic                         rst,
     input logic [INDEX_WIDTH -1 : 0]    rnd,
 
-    input logic                         i_enable,
     input logic [VA_WIDTH -1 : 0]       i_virtual_addr,
 
     output logic [CACHE_BYTES*8 -1 : 0] o_data_loaded,
@@ -46,7 +45,7 @@ module ime #(
         .clk(clk),
         .rst(rst),
 
-        .i_write_enable(i_write_enable),
+        .i_enable(i_write_enable),
         .i_virtual_addr(i_virtual_addr), // both write and read
         .i_physical_addr(i_physical_addr),
 
@@ -66,7 +65,6 @@ module ime #(
         .rst(rst),
         .rnd(rnd),
         
-        .i_enable(i_enable && !o_exeption),
         .i_va_addr(i_virtual_addr),
         .i_pa_addr(tlb_pa_addr),
 
