@@ -41,20 +41,20 @@ module ica #(
 
     localparam SECTOR_WIDTH = $clog2(N_SECTORS);
     localparam OFFSET_WIDTH = $clog2(N_BYTES);
-    localparam NOP = 32'h00100093; // ADDI x1, x0, 1
+    localparam NOP = '0;
 
-    logic [LINE_WIDTH -1 : 0]               memory          [N_SECTORS][N_LINES];
-    logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   tag             [N_SECTORS][N_LINES];
-    logic                                   valid_bit       [N_SECTORS][N_LINES];
+    logic [LINE_WIDTH             -1 : 0]   memory      [N_SECTORS][N_LINES];
+    logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   tag         [N_SECTORS][N_LINES];
+    logic                                   valid_bit   [N_SECTORS][N_LINES];
 
     logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   addr_tag;
-    logic [SECTOR_WIDTH -1 : 0]             addr_idx;
-    logic [OFFSET_WIDTH -1 : 0]             addr_off;
-    logic [INDEX_WIDTH -1 : 0]              hit_index;
-    logic [ID_WIDTH -1 : 0]                 mem_id;
+    logic [SECTOR_WIDTH           -1 : 0]   addr_idx;
+    logic [OFFSET_WIDTH           -1 : 0]   addr_off;
+    logic [INDEX_WIDTH            -1 : 0]   hit_index;
+    logic [ID_WIDTH               -1 : 0]   mem_id;
     logic                                   hit;
     logic                                   mem_hit;
-    logic [INDEX_WIDTH -1 : 0]              rnd_latch;
+    logic [INDEX_WIDTH            -1 : 0]   rnd_latch;
 
     instruction_cache_state                 state;
 
