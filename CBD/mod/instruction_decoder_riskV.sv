@@ -89,7 +89,7 @@ module ide (
         o_jal                       = 1'b0;
         o_use_flag                  = 1'b0;
 
-        o_bad_instruction          = decoded.valid;
+        o_bad_instruction          = ~decoded.valid;
 
         if (decoded.valid) begin            
             case (decoded.format)

@@ -13,7 +13,7 @@ endef
 define VERILATOR_COMPILE
     @mkdir -p build/$@
     
-    @verilator -Wall -Wno-fatal --binary \
+    @verilator -Wall -Wno-fatal --binary --trace --timing\
         --Mdir build/$@ \
         --top-module $@_tb \
         -o $@ \
@@ -58,7 +58,7 @@ mem: ${MODULES_DIR}/memory.sv ${TB_DIR}/mem_tb.sv
 	${VERILATOR_COMPILE}
 
 cbd: ${PKG_DIR}/* ${MODULES_DIR}/* ${TB_DIR}/cbd_tb.sv
-	${VERILATOR_COMPILE}
+	${VERILATOR_COMPILE}; ./cbd; gtkwave cbd_tb.vcd
 
 clean:
 	rm -f $(TARGETS) *.vcd

@@ -21,7 +21,7 @@ module mdu #(
     logic                 cooking_out [STAGES];
 
     assign o_result  = result_out[STAGES-1];
-    assign o_cooking = |cooking_out;
+    assign o_cooking = cooking_out.or();
 
     always_comb begin
         // MUL    

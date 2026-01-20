@@ -24,33 +24,36 @@ module tlb #(
     logic [PA_WIDTH -1 : 0]     physical_addr;
     logic                       hit_found;
 
-    always_comb begin
-        hit_found = 1'b0;
-        physical_addr = 'x;
-        for (int i = 0; i < N_LINES; i++) begin
-            if (valid_bit[i] && (virtual_addrs[i] == i_virtual_addr)) begin
-                hit_found = 1'b1;
-                physical_addr = physical_addrs[i];
-            end
-        end
-        
-        o_miss = !hit_found;
-        o_physical_addr = physical_addr;
-    end
+    assign o_miss = '0;
+    assign o_physical_addr = i_virtual_addr;
 
-    always_ff @(posedge clk or posedge rst) begin
-        if (rst) begin
-            for (int i = 0; i < N_LINES; i++) begin
-                valid_bit[i] <= '0;
-            end
-            oldest_line <= '0;
-        end else if (i_enable) begin
-            virtual_addrs[oldest_line]  <= i_virtual_addr;
-            physical_addrs[oldest_line] <= i_physical_addr;
-            valid_bit[oldest_line]      <= 1'b1;
-            oldest_line                 <= oldest_line + 1'b1;
-        end
-    end
+    // always_comb begin
+    //     hit_found = 1'b0;
+    //     physical_addr = 'x;
+    //     for (int i = 0; i < N_LINES; i++) begin
+    //         if (valid_bit[i] && (virtual_addrs[i] == i_virtual_addr)) begin
+    //             hit_found = 1'b1;
+    //             physical_addr = physical_addrs[i];
+    //         end
+    //     end
+        
+    //     o_miss = !hit_found;
+    //     o_physical_addr = physical_addr;
+    // end
+
+    // always_ff @(posedge clk or posedge rst) begin
+    //     if (rst) begin
+    //         for (int i = 0; i < N_LINES; i++) begin
+    //             valid_bit[i] <= '0;
+    //         end
+    //         oldest_line <= '0;
+    //     end else if (i_enable) begin
+    //         virtual_addrs[oldest_line]  <= i_virtual_addr;
+    //         physical_addrs[oldest_line] <= i_physical_addr;
+    //         valid_bit[oldest_line]      <= 1'b1;
+    //         oldest_line                 <= oldest_line + 1'b1;
+    //     end
+    // end
 
 endmodule
 
