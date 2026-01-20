@@ -1,7 +1,7 @@
 
 module memory #(
     parameter PA_WIDTH      = 8,
-    parameter LINE_BYTES    = 32,
+    parameter LINE_BYTES    = 16,
     parameter ID_WIDTH      = 4,
     parameter STAGES        = 5,
     parameter BUFFER_LENGTH = 4
@@ -12,21 +12,21 @@ module memory #(
     // from arbiter
     input logic                         i_mem_enable,
     input logic                         i_mem_write,
-    input logic [PA_WIDTH   -1 : 0]     i_mem_addr, // address of data
-    input logic [LINE_BYTES*8 -1 : 0]     i_mem_data, // actual data
-    input logic [ID_WIDTH   -1 : 0]     i_mem_id,
+    input logic [PA_WIDTH      -1 : 0]  i_mem_addr, // address of data
+    input logic [LINE_BYTES *8 -1 : 0]  i_mem_data, // actual data
+    input logic [ID_WIDTH      -1 : 0]  i_mem_id,
     input logic                         i_mem_ack,
 
     // to cache
     output logic                        o_mem_enable,
-    output logic [LINE_BYTES*8    -1 : 0] o_mem_data,
+    output logic [LINE_BYTES *8 -1 : 0] o_mem_data,
     output logic [ID_WIDTH      -1 : 0] o_mem_id_response,
     output logic                        o_mem_full //mem piena
 );
 
     typedef struct packed {
-        logic [ID_WIDTH   -1 : 0]       id;
-        logic [LINE_BYTES*8    -1 : 0]    data;
+        logic [ID_WIDTH        -1 : 0]  id;
+        logic [LINE_BYTES *8   -1 : 0]  data;
         logic                           valid;
     } buffer_t;
 
@@ -34,14 +34,14 @@ module memory #(
     localparam int                      DEPTH = 1 << PA_WIDTH;
     
     // memory
-    logic [LINE_BYTES*8-1:0]              mem [DEPTH-1:0];
+    logic [LINE_BYTES *8 -1 : 0]        mem [DEPTH];
 
     // pipeline registers (valid + fields)
     logic                               valid [STAGES]; //  tracking of which pipeline elements have active/valid data
-    logic [PA_WIDTH-1:0]                addr  [STAGES]; //  address memorized for each stage
-    logic [LINE_BYTES*8-1:0]              data  [STAGES]; //  data associated to request in each stage
+    logic [PA_WIDTH      -1 : 0]        addr  [STAGES]; //  address memorized for each stage
+    logic [LINE_BYTES *8 -1 : 0]        data  [STAGES]; //  data associated to request in each stage
     logic                               write [STAGES]; //  1 = write stage, 0 = read stage
-    logic [ID_WIDTH-1:0]                id    [STAGES]; //  id associated to stage
+    logic [ID_WIDTH      -1 : 0]        id    [STAGES]; //  id associated to stage
 
     buffer_t                            buffer [BUFFER_LENGTH]; //results
     int                                 buffer_next = 0;
@@ -83,7 +83,7 @@ module memory #(
 
             // accept new request into stage 0
             valid[0] <= i_mem_enable;
-            addr[0]  <= i_mem_addr;
+            addr[0]  <= i_mem_addr[PA_WIDTH-1 : 4]; // 4 word aligned
             data[0]  <= i_mem_data;
             write[0] <= i_mem_write;
             id[0]    <= i_mem_id;

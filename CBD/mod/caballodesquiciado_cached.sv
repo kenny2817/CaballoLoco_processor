@@ -16,7 +16,7 @@ module cbd #(
     localparam int CACHE_BYTES = 16;
     localparam int STB_LINES = 4;
     localparam int VA_WIDTH = 32;
-    localparam int PA_WIDTH = 20;
+    localparam int PA_WIDTH = 32;
     localparam int ID_WIDTH = 2;
     localparam int MEM_STAGES = 5;
 
@@ -86,7 +86,7 @@ module cbd #(
         end else if (ide_jal) begin
             pc = i_pipe_D.pc + i_pipe_A.imm;
         end else begin
-            pc = i_pipe_D.pc +1;
+            pc = i_pipe_D.pc + 4;
         end
     end
 
@@ -112,8 +112,8 @@ module cbd #(
         .o_cache_miss(cache_miss_F),
 
         // tlb write
-        .i_write_enable(TODO),
-        .i_physical_addr(TODO),
+        .i_write_enable('0),
+        .i_physical_addr('0),
 
         // mem
         .o_mem_enable(mem_instruction_enable),
@@ -256,7 +256,7 @@ module cbd #(
     // MUX
     // selects between ALU result and compare result depending on use_flag and jalr pc +4
     assign i_pipe_M.execution_result =  o_pipe_A.mdu_control.enable ? 
-                                        (o_pipe_A.jalr      ? o_pipe_A.pc +1                        : mdu_result) : 
+                                        (o_pipe_A.jalr      ? o_pipe_A.pc + 4                      : mdu_result) : 
                                         (o_pipe_A.use_flag  ? {31'h00000000, alu_flag_less_than}    : alu_result);
 
     assign i_pipe_M.rs2 = bypass_rs2; // pass rs2 for store operations
@@ -307,8 +307,8 @@ module cbd #(
         .o_stb_full(stb_full_M),
 
         // tlb write
-        .i_write_enable(TODO),
-        .i_physical_addr(TODO),
+        .i_write_enable('0),
+        .i_physical_addr('0),
 
         // mem
         .o_mem_enable(mem_data_enable),
@@ -384,7 +384,7 @@ module cbd #(
     // FD stall -> load-use hazard
     assign stall_load_bypass = o_pipe_A.mem_control.is_load && ((o_pipe_A.wb_control.rd == select_rs1) || (o_pipe_A.wb_control.rd == select_rs2));
 
-    assign enable_pipe_F  = !(stall_pipeline || stall_load_bypass);
+    assign enable_pipe_F  = !(stall_pipeline || stall_load_bypass || tlb_miss_F || cache_miss_F);
     assign enable_pipe_D  = !(stall_pipeline || stall_load_bypass);
     assign enable_pipe_A  = !(stall_pipeline);
     assign enable_pipe_M  = !(stall_pipeline);

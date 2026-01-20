@@ -41,7 +41,7 @@ module ica #(
 
     localparam SECTOR_WIDTH = $clog2(N_SECTORS);
     localparam OFFSET_WIDTH = $clog2(N_BYTES);
-    localparam NOP = 32'b00000000000000000000000000010011;
+    localparam NOP = 32'h00100093; // ADDI x1, x0, 1
 
     logic [LINE_WIDTH -1 : 0]               memory          [N_SECTORS][N_LINES];
     logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   tag             [N_SECTORS][N_LINES];
@@ -57,22 +57,20 @@ module ica #(
     logic [INDEX_WIDTH -1 : 0]              rnd_latch;
 
     instruction_cache_state                 state;
-    instruction_cache_state                 next_state;
 
     // assignments
     assign addr_tag     = i_pa_addr[PA_WIDTH -1 : OFFSET_WIDTH];
     assign addr_idx     = i_va_addr[SECTOR_WIDTH + OFFSET_WIDTH -1 : OFFSET_WIDTH];
     assign addr_off     = {i_va_addr[OFFSET_WIDTH -1 : 2], 2'd0}; // word aligned
 
-    // assign o_miss      = !hit && !mem_hit;
     assign o_miss      = !hit;
 
     //  memory request
-    assign o_mem_enable = (state == I_IDLE) && !hit;
+    // assign o_mem_enable = (state == I_REQUEST);
     assign o_mem_addr   = {addr_tag, {OFFSET_WIDTH{1'b0}}};
 
     // memory response
-    assign mem_hit      = i_mem_enable && mem_id == i_mem_id_response;
+    assign mem_hit      = i_mem_enable && (mem_id == i_mem_id_response);
     assign o_mem_ack    = (state == I_REQUEST) && mem_hit;
     
     always_comb begin : hit_logic
@@ -87,23 +85,7 @@ module ica #(
         end
 
         // output logic
-        o_read_data = hit ? memory[addr_idx][hit_index][(addr_off +1) * 8 -1 -: REG_WIDTH] : NOP;
-    end
-
-    always_comb begin : state_machine
-        next_state = state;
-        case (state)
-            I_IDLE: begin
-                if (!hit && !i_mem_in_use) begin
-                    next_state = I_REQUEST;
-                end
-            end
-            I_REQUEST: begin
-                if (mem_hit) begin
-                    next_state = I_IDLE;
-                end
-            end
-        endcase
+        o_read_data = hit ? memory[addr_idx][hit_index][(addr_off * 8) + REG_WIDTH -1 -: REG_WIDTH] : NOP;
     end
 
     always_ff @( posedge clk or posedge rst) begin : control_flow
@@ -114,17 +96,25 @@ module ica #(
                 end
             end
             state <= I_IDLE;
+            o_mem_enable <= 1'b0;
         end else begin
-            state <= next_state;
             case (state)
                 I_IDLE: begin
-                    mem_id <= i_mem_id_request;
-                    rnd_latch <= rnd;
+                    if (!hit && !i_mem_in_use) begin
+                        state       <= I_REQUEST;
+                        mem_id      <= i_mem_id_request;
+                        rnd_latch   <= rnd;
+                        o_mem_enable <= 1'b1;
+                    end
                 end
                 I_REQUEST: begin
-                    tag         [addr_idx][rnd_latch] <= addr_tag;
-                    valid_bit   [addr_idx][rnd_latch] <= 1'b1;
-                    memory      [addr_idx][rnd_latch] <= i_mem_data;
+                    o_mem_enable <= 1'b0;
+                    if (mem_hit) begin
+                        state <= I_IDLE;
+                        tag         [addr_idx][rnd_latch] <= addr_tag;
+                        valid_bit   [addr_idx][rnd_latch] <= 1'b1;
+                        memory      [addr_idx][rnd_latch] <= i_mem_data;
+                    end
                 end
             endcase
         end
