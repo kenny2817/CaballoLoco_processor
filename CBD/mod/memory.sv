@@ -34,7 +34,7 @@ module memory #(
     localparam int                      DEPTH = 1 << PA_WIDTH;
     
     // memory
-    logic [LINE_BYTES *8 -1 : 0]        mem [DEPTH];
+    logic [LINE_BYTES *8 -1 : 0]        mem [64];
 
     // pipeline registers (valid + fields)
     logic                               valid [STAGES]; //  tracking of which pipeline elements have active/valid data

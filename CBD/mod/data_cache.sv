@@ -74,14 +74,14 @@ module dca #(
 
     logic                                   mem_hit     [2];
 
-    logic [LINE_WIDTH -1 : 0]                line_read;
-    logic [31 : 0]                           word_read;
-    logic [15 : 0]                           half_read;
-    logic [7 : 0]                            byte_read;
+    logic [LINE_WIDTH -1 : 0]               line_read;
+    logic [31 : 0]                          word_read;
+    logic [15 : 0]                          half_read;
+    logic [7 : 0]                           byte_read;
 
 
-    data_cache_state                         state;
-    data_cache_state                         next_state;
+    data_cache_state                        state;
+    data_cache_state                        next_state;
 
     // tasks
         task automatic request_mem(

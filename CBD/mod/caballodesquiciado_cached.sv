@@ -17,7 +17,7 @@ module cbd #(
     localparam int STB_LINES = 4;
     localparam int VA_WIDTH = 32;
     localparam int PA_WIDTH = 32;
-    localparam int ID_WIDTH = 2;
+    localparam int ID_WIDTH = 4;
     localparam int MEM_STAGES = 5;
 
 // CABLE MANAGEMENT =====================================================
@@ -72,7 +72,7 @@ module cbd #(
         .clk(clk),
         .rst(rst),
 
-        .i_write_enable(enable_pipe_F),
+        .i_write_enable(enable_pipe_F || cmp_branch || ide_jal),
         .i_write_data(pc),
         .o_read_data(i_pipe_D.pc)
     );
@@ -80,7 +80,7 @@ module cbd #(
     // PC MANAGER
     always_comb begin
         if (cmp_branch) begin
-            pc = o_pipe_D.pc + i_pipe_A.imm;
+            pc = o_pipe_A.pc + o_pipe_A.imm;
         end else if (o_pipe_A.jalr) begin
             pc = alu_result;
         end else if (ide_jal) begin
@@ -380,11 +380,11 @@ module cbd #(
     logic stall_pipeline, stall_load_bypass;
 
     // full stall -> memory is overloaded | memory miss (tlb or cache) in M | store buffer full in M | mdu is cooking
-    assign stall_pipeline = mem_full || tlb_miss_M || cache_miss_M || stb_full_M || mdu_cooking;
+    assign stall_pipeline = mem_full || tlb_miss_M || cache_miss_M || stb_full_M || mdu_cooking || tlb_miss_F || cache_miss_F;
     // FD stall -> load-use hazard
     assign stall_load_bypass = o_pipe_A.mem_control.is_load && ((o_pipe_A.wb_control.rd == select_rs1) || (o_pipe_A.wb_control.rd == select_rs2));
 
-    assign enable_pipe_F  = !(stall_pipeline || stall_load_bypass || tlb_miss_F || cache_miss_F);
+    assign enable_pipe_F  = !(stall_pipeline || stall_load_bypass);
     assign enable_pipe_D  = !(stall_pipeline || stall_load_bypass);
     assign enable_pipe_A  = !(stall_pipeline);
     assign enable_pipe_M  = !(stall_pipeline);
@@ -396,7 +396,7 @@ module cbd #(
     assign branch_misprediction = (cmp_branch); // for now no branch prediction implemented
 
     // flush on branch misprediction | jalr | tlb miss or cache miss in F | bad instruction in D
-    assign flush_pipe_D   = (branch_misprediction || i_pipe_A.jalr || tlb_miss_F || cache_miss_F);
+    assign flush_pipe_D   = (branch_misprediction || i_pipe_A.jalr);
     assign flush_pipe_A   = (branch_misprediction || stall_load_bypass || bad_instruction);
     assign flush_pipe_M   = (0); // no flush in M
     assign flush_pipe_W   = (0); // no flush in W
@@ -412,7 +412,7 @@ module cbd #(
         .clk(clk),
         .rst(rst),
 
-        .i_instr_enable(mem_instruction_enable),
+        .i_instr_enable(mem_instruction_enable && ~branch_misprediction),
         .i_instr_addr(mem_instruction_addr),
 
         .i_data_enable(mem_data_enable),
