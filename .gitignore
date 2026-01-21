@@ -3,7 +3,6 @@ demux
 pci
 reg_multi
 
-*.vcd
 *.zip
 
 ignored/
