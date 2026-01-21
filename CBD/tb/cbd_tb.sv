@@ -43,9 +43,9 @@ module cbd_tb;
 
         // 1C: sw x1, 128(x2)
         // 18: bne x2, x3, -12
-        // 14: addi x2, x2, 1
+        // 14: addi x2, x2, 4
         // 10: add x1, x1, x4
-        dut.MEM.mem[1] = {32'h08112023, 32'hFE311AE3, 32'h00110113, 32'h004080B3};
+        dut.MEM.mem[1] = {32'h08112023, 32'hFE311AE3, 32'h00410113, 32'h004080B3};
 
         // dut.MEM.mem[0] = {32'h00100093, 32'h00200113, 32'h002081b3, 32'h00200113}; // ADDI x1, x0, 1, ADDI x2, x0, 2. ADD  x3, x1, x2
         // dut.MEM.mem[1] = {32'h00300293, 32'h00300313, 32'h00310333, 32'h00300313}; // ADDI x5, x0, 3, ADDI x6, x0, 3. ADD  x6, x5, x6
@@ -87,7 +87,7 @@ module cbd_tb;
         $display("--- Reset released ---");
 
         // Run simulation
-        repeat (400) @(posedge clk);
+        repeat (4000) @(posedge clk);
 
         // End simulation
         $display("--- Simulation finished ---");

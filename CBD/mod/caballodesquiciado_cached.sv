@@ -7,6 +7,12 @@ module cbd #(
     input logic [0 : 0] rnd
 );
 
+    int clocks = 0;
+    always_ff @( posedge clk ) begin
+        clocks <= clocks + 1;
+    end
+
+
 // LOCAL PARAMETERS =====================================================
     localparam int NUM_REG = 32;
     localparam int REG_WIDTH = 32;
