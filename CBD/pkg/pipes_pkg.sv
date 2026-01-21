@@ -17,6 +17,8 @@ package pipes_pkg;
     typedef struct packed {
         logic                   jalr;
         logic                   use_flag;
+        logic [5-1 : 0]         select_rs1;
+        logic [5-1 : 0]         select_rs2;
         logic [REG_WIDTH-1 : 0] rs1;
         logic [REG_WIDTH-1 : 0] rs2;
         logic [REG_WIDTH-1 : 0] imm;

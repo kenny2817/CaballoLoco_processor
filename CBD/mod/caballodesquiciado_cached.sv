@@ -39,7 +39,6 @@ module cbd #(
 
     // decode
     logic [REG_WIDTH -1 : 0] registers [NUM_REG];
-    logic [4 : 0] select_rs1, select_rs2;
 
     // memory signals
     logic                   mem_instruction_enable, mem_data_enable;
@@ -158,8 +157,8 @@ module cbd #(
         .o_mem_control(i_pipe_A.mem_control),
         .o_wb_control(i_pipe_A.wb_control),
 
-        .o_rs1(select_rs1),
-        .o_rs2(select_rs2),
+        .o_rs1(i_pipe_A.select_rs1),
+        .o_rs2(i_pipe_A.select_rs2),
         .o_imm(i_pipe_A.imm),
 
         .o_jal(ide_jal),
@@ -185,8 +184,8 @@ module cbd #(
     );
 
     // MUX
-    assign i_pipe_A.rs1 = registers[select_rs1];
-    assign i_pipe_A.rs2 = registers[select_rs2];
+    assign i_pipe_A.rs1 = registers[i_pipe_A.select_rs1];
+    assign i_pipe_A.rs2 = registers[i_pipe_A.select_rs2];
     assign i_pipe_A.pc  = o_pipe_D.pc;
 
 // PIPE_A ===============================================================
@@ -209,13 +208,13 @@ module cbd #(
 
     // BYPASS
     logic [REG_WIDTH -1 : 0] bypass_rs1, bypass_rs2;
-    assign bypass_rs1 = (o_pipe_M.wb_control.is_write_back  && (o_pipe_M.wb_control.rd  == select_rs1)) ? o_pipe_M.execution_result :
-                        (o_pipe_W.wb_control.is_write_back  && (o_pipe_W.wb_control.rd  == select_rs1)) ? o_pipe_W.execution_result :
-                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rd == select_rs1)) ? o_pipe_WC.mux_result      :
+    assign bypass_rs1 = (o_pipe_M.wb_control.is_write_back  && (o_pipe_M.wb_control.rd  == o_pipe_A.select_rs1)) ? o_pipe_M.execution_result :
+                        (o_pipe_W.wb_control.is_write_back  && (o_pipe_W.wb_control.rd  == o_pipe_A.select_rs1)) ? o_pipe_W.execution_result :
+                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rd == o_pipe_A.select_rs1)) ? o_pipe_WC.mux_result      :
                         o_pipe_A.rs1;
-    assign bypass_rs2 = (o_pipe_M.wb_control.is_write_back  && (o_pipe_M.wb_control.rd  == select_rs2)) ? o_pipe_M.execution_result :
-                        (o_pipe_W.wb_control.is_write_back  && (o_pipe_W.wb_control.rd  == select_rs2)) ? o_pipe_W.execution_result :
-                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rd == select_rs2)) ? o_pipe_WC.mux_result      :
+    assign bypass_rs2 = (o_pipe_M.wb_control.is_write_back  && (o_pipe_M.wb_control.rd  == o_pipe_A.select_rs2)) ? o_pipe_M.execution_result :
+                        (o_pipe_W.wb_control.is_write_back  && (o_pipe_W.wb_control.rd  == o_pipe_A.select_rs2)) ? o_pipe_W.execution_result :
+                        (o_pipe_WC.wb_control.is_write_back && (o_pipe_WC.wb_control.rd == o_pipe_A.select_rs2)) ? o_pipe_WC.mux_result      :
                         o_pipe_A.rs2;
 
     // Arithmetic Logic Unit
@@ -382,7 +381,7 @@ module cbd #(
     // full stall -> memory is overloaded | memory miss (tlb or cache) in M | store buffer full in M | mdu is cooking
     assign stall_pipeline = mem_full || tlb_miss_M || cache_miss_M || stb_full_M || mdu_cooking || tlb_miss_F || cache_miss_F;
     // FD stall -> load-use hazard
-    assign stall_load_bypass = o_pipe_A.mem_control.is_load && ((o_pipe_A.wb_control.rd == select_rs1) || (o_pipe_A.wb_control.rd == select_rs2));
+    assign stall_load_bypass = o_pipe_A.mem_control.is_load && ((o_pipe_A.wb_control.rd == i_pipe_A.select_rs1) || (o_pipe_A.wb_control.rd == i_pipe_A.select_rs2));
 
     assign enable_pipe_F  = !(stall_pipeline || stall_load_bypass);
     assign enable_pipe_D  = !(stall_pipeline || stall_load_bypass);
