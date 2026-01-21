@@ -9,6 +9,4 @@ alu
 dme
 cbd
 
-*.vcd
-
 build/
