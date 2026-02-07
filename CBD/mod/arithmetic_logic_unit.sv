@@ -1,9 +1,9 @@
 
-import alu_pkg::*;
-
-module alu #(
-    parameter REG_WIDTH = 32
-)(
+module alu 
+    import const_pkg::*;
+    import enums_pkg::*;
+    import cable_pkg::*;
+(
     // control
     input  alu_control_t            i_control,
 

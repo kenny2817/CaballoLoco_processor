@@ -1,15 +1,16 @@
-module reg_mono # (
-    parameter DATA_WIDTH
-) (
+module program_counter # 
+    import const_pkg::*;
+(
     input logic                         clk,
     input logic                         rst,
 
     input logic                         i_write_enable,
-    input logic [DATA_WIDTH - 1 : 0]    i_write_data,
-    output logic [DATA_WIDTH - 1 : 0]   o_read_data
+    input logic [REG_WIDTH - 1 : 0]     i_write_data,
+    
+    output logic [REG_WIDTH - 1 : 0]    o_read_data
 );
 
-    logic [DATA_WIDTH - 1 : 0] data;
+    logic [REG_WIDTH - 1 : 0] data;
 
     assign o_read_data = data;
 

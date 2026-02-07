@@ -1,9 +1,7 @@
 
-module arb #(
-    parameter PA_WIDTH,
-    parameter LINE_BYTES,
-    parameter ID_WIDTH
-) (
+module arb 
+    import const_pkg::*;
+(
     input logic                         clk,
     input logic                         rst,
     

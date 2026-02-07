@@ -1,10 +1,9 @@
 
-import mdu_pkg::*;
-
-module mdu #(
-    parameter REG_WIDTH = 32,
-    parameter int STAGES = 5
-)(
+module mdu 
+    import const_pkg::*;
+    import enums_pkg::*;
+    import cable_pkg::*;
+(
     input  logic                  clk,
     input  logic                  rst, 
   
@@ -17,10 +16,10 @@ module mdu #(
     output logic                  o_cooking   // signal that the unit is busy cooking
 );
 
-    logic [REG_WIDTH-1:0] result_out  [STAGES];
-    logic                 cooking_out [STAGES];
+    logic [REG_WIDTH-1:0] result_out  [MDU_STAGES];
+    logic                 cooking_out [MDU_STAGES];
 
-    assign o_result  = result_out[STAGES-1];
+    assign o_result  = result_out[MDU_STAGES-1];
     assign o_cooking = cooking_out.or();
 
     always_comb begin
@@ -64,12 +63,12 @@ module mdu #(
 
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
-            for (int i = 0; i < STAGES; i++) begin
+            for (int i = 0; i < MDU_STAGES; i++) begin
                 cooking_out[i] <= 1'b0;
             end
         end else begin
             cooking_out[0] <= i_control.enable;
-            for (int i = STAGES -1; i > 0; i--) begin
+            for (int i = MDU_STAGES -1; i > 0; i--) begin
                 result_out[i-1]  <= result_out[i];
                 cooking_out[i-1] <= cooking_out[i];
             end

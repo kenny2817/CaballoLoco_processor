@@ -1,11 +1,7 @@
 
-module memory #(
-    parameter PA_WIDTH      = 8,
-    parameter LINE_BYTES    = 16,
-    parameter ID_WIDTH      = 4,
-    parameter STAGES        = 5,
-    parameter BUFFER_LENGTH = 4
-) (
+module memory #
+    import const_pkg::*;
+(
     input logic                         clk,
     input logic                         rst,
 
@@ -13,20 +9,20 @@ module memory #(
     input logic                         i_mem_enable,
     input logic                         i_mem_write,
     input logic [PA_WIDTH      -1 : 0]  i_mem_addr, // address of data
-    input logic [LINE_BYTES *8 -1 : 0]  i_mem_data, // actual data
+    input logic [LINE_WIDTH -1 : 0]  i_mem_data, // actual data
     input logic [ID_WIDTH      -1 : 0]  i_mem_id,
     input logic                         i_mem_ack,
 
     // to cache
     output logic                        o_mem_enable,
-    output logic [LINE_BYTES *8 -1 : 0] o_mem_data,
+    output logic [LINE_WIDTH -1 : 0] o_mem_data,
     output logic [ID_WIDTH      -1 : 0] o_mem_id_response,
     output logic                        o_mem_full //mem piena
 );
 
     typedef struct packed {
         logic [ID_WIDTH        -1 : 0]  id;
-        logic [LINE_BYTES *8   -1 : 0]  data;
+        logic [LINE_WIDTH   -1 : 0]  data;
         logic                           valid;
     } buffer_t;
 
@@ -34,14 +30,14 @@ module memory #(
     localparam int                      DEPTH = 1 << PA_WIDTH;
     
     // memory
-    logic [LINE_BYTES *8 -1 : 0]        mem [64];
+    logic [LINE_WIDTH -1 : 0]        mem [64];
 
     // pipeline registers (valid + fields)
-    logic                               valid [STAGES]; //  tracking of which pipeline elements have active/valid data
-    logic [PA_WIDTH      -1 : 0]        addr  [STAGES]; //  address memorized for each stage
-    logic [LINE_BYTES *8 -1 : 0]        data  [STAGES]; //  data associated to request in each stage
-    logic                               write [STAGES]; //  1 = write stage, 0 = read stage
-    logic [ID_WIDTH      -1 : 0]        id    [STAGES]; //  id associated to stage
+    logic                               valid [MEM_STAGES]; //  tracking of which pipeline elements have active/valid data
+    logic [PA_WIDTH      -1 : 0]        addr  [MEM_STAGES]; //  address memorized for each stage
+    logic [LINE_WIDTH -1 : 0]        data  [MEM_STAGES]; //  data associated to request in each stage
+    logic                               write [MEM_STAGES]; //  1 = write stage, 0 = read stage
+    logic [ID_WIDTH      -1 : 0]        id    [MEM_STAGES]; //  id associated to stage
 
     buffer_t                            buffer [BUFFER_LENGTH]; //results
     int                                 buffer_next = 0;
@@ -51,7 +47,7 @@ module memory #(
     int                                 i;
 
      // output full signal
-    assign o_mem_full           = buffer[buffer_next].valid && !write[STAGES-1];
+    assign o_mem_full           = buffer[buffer_next].valid && !write[MEM_STAGES-1];
     assign o_mem_enable         = buffer[buffer_exit].valid;
     assign o_mem_data           = buffer[buffer_exit].data;
     assign o_mem_id_response    = buffer[buffer_exit].id;
@@ -59,7 +55,7 @@ module memory #(
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
             // initialize everything to zero
-            for (i=0;i<STAGES;i=i+1) begin
+            for (i=0;i<MEM_STAGES;i=i+1) begin
                 valid[i] <= 1'b0;
                 addr[i]  <= '0;
                 data[i]  <= '0;
@@ -73,7 +69,7 @@ module memory #(
             end
         end else if (!o_mem_full) begin
             // shift pipeline from MSB down to 1
-            for (i = STAGES -1; i > 0; i--) begin
+            for (i = MEM_STAGES -1; i > 0; i--) begin
                 valid[i] <= valid[i-1];
                 addr[i]  <= addr[i-1];
                 data[i]  <= data[i-1];
@@ -89,14 +85,14 @@ module memory #(
             id[0]    <= i_mem_id;
 
             // handle MEM stage access combinationally on clock edge: perform writes and read
-            if (valid[STAGES - 1] && write[STAGES - 1]) begin 
+            if (valid[MEM_STAGES - 1] && write[MEM_STAGES - 1]) begin 
                 // write to memory
-                mem[addr[STAGES - 1]] <= data[STAGES - 1];
+                mem[addr[MEM_STAGES - 1]] <= data[MEM_STAGES - 1];
             end
 
-            if (valid[STAGES-1] && !write[STAGES-1]) begin
-                buffer[buffer_next].data    <= mem[addr[STAGES-1]];
-                buffer[buffer_next].id      <= id[STAGES-1];
+            if (valid[MEM_STAGES-1] && !write[MEM_STAGES-1]) begin
+                buffer[buffer_next].data    <= mem[addr[MEM_STAGES-1]];
+                buffer[buffer_next].id      <= id[MEM_STAGES-1];
                 buffer[buffer_next].valid   <= 1'b1;
                 buffer_next <= (buffer_next + 1) % BUFFER_LENGTH;
             end

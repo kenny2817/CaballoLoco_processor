@@ -1,6 +1,8 @@
-import cmp_pkg::*;
 
-module cmp (
+module cmp 
+    import enums_pkg::*;
+    import cable_pkg::*;
+(
     input cmp_control_t i_control,
     input logic         i_alu_flag_zero,
     input logic         i_alu_flag_less_than,

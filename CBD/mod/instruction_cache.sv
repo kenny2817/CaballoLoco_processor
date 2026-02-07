@@ -2,24 +2,14 @@
 typedef enum logic [0:0] { 
     I_IDLE,                   // ready for miss
     I_REQUEST                 // stall, request memory + save id
-} instruction_cache_state;
+} instruction_cache_s;
 
-
-module ica #(
-    parameter REG_WIDTH = 32,                                       // register width
-    parameter N_SECTORS,                                            // number of sectors
-    parameter N_LINES,                                              // number of lines per sector
-    parameter N_BYTES,                                              // number of bytes per element
-    parameter VA_WIDTH,                                             // virtual address width
-    parameter PA_WIDTH,                                             // physical address width (this should be already the tag!)
-    parameter ID_WIDTH,                                             // memory id width
-    
-    localparam LINE_WIDTH = N_BYTES * 8,                            // line width in bits
-    localparam INDEX_WIDTH   = (N_LINES > 1) ? $clog2(N_LINES) : 1  // index width in bits
-) (
+module ica
+    import const_pkg::*;
+(
     input logic                             clk,
     input logic                             rst,
-    input logic [INDEX_WIDTH -1 : 0]        rnd,
+    input logic [IINDEX_WIDTH -1 : 0]        rnd,
 
     input logic [VA_WIDTH -1 : 0]           i_va_addr,
     input logic [PA_WIDTH -1 : 0]           i_pa_addr,
@@ -50,13 +40,13 @@ module ica #(
     logic [PA_WIDTH -OFFSET_WIDTH -1 : 0]   addr_tag;
     logic [SECTOR_WIDTH           -1 : 0]   addr_idx;
     logic [OFFSET_WIDTH           -1 : 0]   addr_off;
-    logic [INDEX_WIDTH            -1 : 0]   hit_index;
+    logic [IINDEX_WIDTH            -1 : 0]   hit_index;
     logic [ID_WIDTH               -1 : 0]   mem_id;
     logic                                   hit;
     logic                                   mem_hit;
-    logic [INDEX_WIDTH            -1 : 0]   rnd_latch;
+    logic [IINDEX_WIDTH            -1 : 0]   rnd_latch;
 
-    instruction_cache_state                 state;
+    instruction_cache_s                 state;
 
     // assignments
     assign addr_tag     = i_pa_addr[PA_WIDTH -1 : OFFSET_WIDTH];
@@ -80,7 +70,7 @@ module ica #(
         for (int i = 0; i < N_LINES; i++) begin
             if (valid_bit[addr_idx][i] && (tag[addr_idx][i] == addr_tag)) begin
                 hit = 1'b1;
-                hit_index = INDEX_WIDTH'(i);
+                hit_index = IINDEX_WIDTH'(i);
             end
         end
 

@@ -1,9 +1,8 @@
-import cache_pkg::*;
 
-module stb #(
-    parameter VA_WIDTH,
-    parameter N_LINES
-) (
+module stb 
+    import const_pkg::*;
+    import cable_pkg::*;
+(
     input logic clk,
     input logic rst,
 
@@ -24,9 +23,9 @@ module stb #(
     output logic                    o_hit,
     output logic [VA_WIDTH -1 : 0]  o_read_data
 );
-    localparam LINE_SELECT = $clog2(N_LINES);
+    localparam LINE_SELECT = $clog2(DSTB_LINES);
 
-    mem_data_t                      buffer [N_LINES];
+    mem_data_t                      buffer [DSTB_LINES];
     
     logic [LINE_SELECT -1 : 0]      oldest_line, newest_line, load_index;
     logic                           hit_cache, load_cache;
@@ -39,7 +38,7 @@ module stb #(
         o_hit = 1'b0;
         load_index = 'x; 
         
-        for (int i = 0; i < N_LINES; i++) begin
+        for (int i = 0; i < DSTB_LINES; i++) begin
             if (buffer[i].enable && (buffer[i].address == i_store.address)) begin
                 o_hit = 1'b1;
                 load_index = LINE_SELECT'(i);
@@ -51,7 +50,7 @@ module stb #(
     
     always_ff @(posedge clk or posedge rst) begin
         if (rst) begin
-            for (int i = 0; i < N_LINES; i++) begin
+            for (int i = 0; i < DSTB_LINES; i++) begin
                 buffer[i].enable <= '0;
             end
             oldest_line <= '0;

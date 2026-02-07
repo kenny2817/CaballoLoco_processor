@@ -1,24 +1,15 @@
 
-import cache_pkg::*;
-
 typedef enum logic [1:0] { 
     D_IDLE,                                                         // ready for store and load
     D_S_REQUEST,                                                    // wait mem miss, ready for load
     D_L_REQUEST,                                                    // stall, wait load miss
     D_BOTH_REQUEST                                                  // stall, wait load miss, store in background
-} data_cache_state;
+} data_cache_s;
 
-module dca #(
-    parameter REG_WIDTH = 32,                                       // register width in bits
-    parameter N_SECTORS,                                            // number of sectors
-    parameter N_LINES,                                              // number of lines per sector
-    parameter N_BYTES,                                              // number of bytes per line
-    parameter PA_WIDTH,                                             // physical address width (this should be already the tag!)
-    parameter ID_WIDTH,                                             // id width for memory requests
-    
-    localparam LINE_WIDTH    = N_BYTES * 8,                         // line width in bits
-    localparam INDEX_WIDTH   = (N_LINES > 1) ? $clog2(N_LINES) : 1  // index width in bits
-) (
+module dca 
+    import const_pkg::*;
+    import enums_pkg::*;
+(
     input logic                             clk,
     input logic                             rst,
     input logic [INDEX_WIDTH -1 : 0]        rnd,
@@ -80,8 +71,8 @@ module dca #(
     logic [7 : 0]                           byte_read;
 
 
-    data_cache_state                        state;
-    data_cache_state                        next_state;
+    data_cache_s                        state;
+    data_cache_s                        next_state;
 
     // tasks
         task automatic request_mem(

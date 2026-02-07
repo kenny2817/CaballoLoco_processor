@@ -1,8 +1,8 @@
 
-module tlb #(
-    parameter N_LINES,
-    parameter VA_WIDTH,
-    parameter PA_WIDTH
+module tlb
+    import const_pkg::*;
+#(
+    parameter int N_LINES = 4
 ) (
     input logic                     clk,
     input logic                     rst,
@@ -14,7 +14,7 @@ module tlb #(
     output logic [PA_WIDTH -1 : 0]  o_physical_addr,
     output logic                    o_miss
 );
-    localparam LINE_SELECT = $clog2(N_LINES);
+    localparam int LINE_SELECT = $clog2(N_LINES);
 
     logic [VA_WIDTH -1 : 0]     virtual_addrs   [N_LINES];
     logic [PA_WIDTH -1 : 0]     physical_addrs  [N_LINES];

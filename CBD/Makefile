@@ -10,6 +10,7 @@ define IVERILOG_COMPILE
 	@iverilog $(IFLAGS) -s $@_tb -o $@ $^ || (echo "failed - $@"; exit 1)
 	@echo "success - $@"
 endef
+
 define VERILATOR_COMPILE
     @mkdir -p build/$@
     

@@ -1,19 +1,10 @@
 
-module ime #(
-    parameter TLB_LINES,
-    parameter CACHE_SECTORS,
-    parameter CACHE_LINES,
-    parameter CACHE_BYTES,
-    parameter REG_WIDTH,
-    parameter VA_WIDTH, 
-    parameter PA_WIDTH,
-    parameter ID_WIDTH,
-    localparam INDEX_WIDTH   = (CACHE_LINES > 1) ? $clog2(CACHE_LINES) : 1,
-    localparam LINE_WIDTH    = CACHE_BYTES * 8
-) (
+module ime 
+    import const_pkg::*;
+(
     input logic                         clk,
     input logic                         rst,
-    input logic [INDEX_WIDTH -1 : 0]    rnd,
+    input logic [IINDEX_WIDTH -1 : 0]    rnd,
 
     input logic [VA_WIDTH -1 : 0]       i_virtual_addr,
 
@@ -40,9 +31,7 @@ module ime #(
     logic [PA_WIDTH -1 : 0]             tlb_pa_addr;
 
     tlb #(
-        .N_LINES(TLB_LINES),
-        .VA_WIDTH(VA_WIDTH),
-        .PA_WIDTH(PA_WIDTH)
+        .N_LINES(ITLB_LINES)
     ) TLB (
         .clk(clk),
         .rst(rst),
@@ -55,14 +44,7 @@ module ime #(
         .o_miss(o_tlb_miss)
     );
 
-    ica #(
-        .N_SECTORS(CACHE_SECTORS),
-        .N_LINES(CACHE_LINES),
-        .N_BYTES(CACHE_BYTES),
-        .VA_WIDTH(VA_WIDTH),
-        .PA_WIDTH(PA_WIDTH),
-        .ID_WIDTH(ID_WIDTH)
-    ) CACHE (
+    ica CACHE (
         .clk(clk),
         .rst(rst),
         .rnd(rnd),

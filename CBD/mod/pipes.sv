@@ -1,7 +1,7 @@
 
-import pipes_pkg::*;
-
-module pipe #(
+module pipe 
+    import cables_pkg::*;
+#(
     type CABLE_T,
     parameter CABLE_T FLUSH_VALUE = '0
 ) (
